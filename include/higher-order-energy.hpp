@@ -61,6 +61,7 @@ template <typename R, int D>
 class HigherOrderEnergy {
     public:
         typedef int VarId;
+        typedef VarId NodeId;
 
         // Constructs empty HigherOrderEnergy with no variables or terms
         HigherOrderEnergy();
@@ -70,6 +71,7 @@ class HigherOrderEnergy {
         VarId AddVar();
         VarId AddVars(int n);
         VarId NumVars() const { return _varCounter; }
+        NodeId AddNode(int n = 1) { return AddVars(n); }
 
         // Adds a monomial to the HigherOrderEnergy. degree must be <= D
         // vars is an array of length at least degree, with the indices of 
