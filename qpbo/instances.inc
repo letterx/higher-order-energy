@@ -9,6 +9,7 @@
 template class QPBO<int>;
 template class QPBO<float>;
 template class QPBO<double>;
+template class QPBO<int64_t>;
 
 template <> 
 	inline void QPBO<int>::get_type_information(char*& type_name, char*& type_format)
@@ -31,4 +32,10 @@ template <>
 	type_format = "Lf";
 }
 
+template <> 
+	inline void QPBO<int64_t>::get_type_information(char*& type_name, char*& type_format)
+{
+	type_name = "int64_t";
+	type_format = "lld";
+}
 
