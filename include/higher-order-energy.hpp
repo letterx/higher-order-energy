@@ -227,7 +227,7 @@ inline void HigherOrderEnergy<R, D>::AddClique(const std::vector<VarId>& vars,
         const std::vector<R>& energyTable) {
     const unsigned int size = vars.size();
     const unsigned int numAssignments = 1 << size;
-    ASSERT(energyTable.size() == numAssignments);
+    assert(energyTable.size() == numAssignments);
 
     R coeffs[numAssignments];
     for (unsigned int subset = 1; subset < numAssignments; ++subset) {
