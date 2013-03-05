@@ -13,10 +13,7 @@ EXAMPLE_SRCS = higher-order-example.cpp \
 			   foe-cliques.cpp
 EXAMPLE_OBJS = $(EXAMPLE_SRCS:.cpp=.o)
 
-QPBO_SRCS = $(QPBO_DIR)/QPBO.cpp \
-			$(QPBO_DIR)/QPBO_extra.cpp \
-			$(QPBO_DIR)/QPBO_maxflow.cpp \
-			$(QPBO_DIR)/QPBO_postprocessing.cpp
+QPBO_SRCS = $(QPBO_DIR)/QPBO.cpp
 QPBO_OBJS = $(QPBO_SRCS:.cpp=.o)
 
 TARGET = higher-order-example

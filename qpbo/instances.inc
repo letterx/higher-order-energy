@@ -1,3 +1,6 @@
+#ifndef _INSTANCES_INC_
+#define _INSTANCES_INC_
+
 #include "QPBO.h"
 
 #ifdef _MSC_VER
@@ -39,3 +42,4 @@ template <>
 	type_format = "lld";
 }
 
+#endif

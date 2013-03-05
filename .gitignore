@@ -16,3 +16,6 @@
 *.swp
 *~
 *.P
+
+# Compiled binaries
+higher-order-example

@@ -940,4 +940,7 @@ template <typename REAL>
 	}
 }
 
+#include "QPBO_extra.cpp"
+#include "QPBO_maxflow.cpp"
+#include "QPBO_postprocessing.cpp"
 #include "instances.inc"
