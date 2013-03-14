@@ -200,7 +200,7 @@ public:
 
 	// Returns 0 or 1, if the node is labeled, and a negative number otherwise.
 	// Can be called after Solve()/ComputeWeakPersistencies()/Probe()/Improve().
-	int GetLabel(NodeId i);
+	int GetLabel(NodeId i) const;
 
 	// Sets label for node i. 
 	// Can be called before Stitch()/Probe()/Improve().
@@ -662,7 +662,7 @@ template <typename REAL>
 }
 
 template <typename REAL> 
-	inline int QPBO<REAL>::GetLabel(NodeId i)
+	inline int QPBO<REAL>::GetLabel(NodeId i) const
 {
 	user_assert(i >= 0 && i < node_num);
 
