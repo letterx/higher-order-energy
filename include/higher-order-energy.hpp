@@ -83,6 +83,7 @@ class HigherOrderEnergy {
         void AddClique(const std::vector<VarId>& vars, const std::vector<R>& energy);
 
         void AddUnaryTerm(VarId v, R coeff);
+        void AddUnaryTerm(VarId v, R E0, R E1) { AddUnaryTerm(v, E1 - E0); } 
     
         // Reduces the HigherOrderEnergy to quadratic form
         // NOTE: THIS IS A DESTRUCTIVE OPERATION, so do not rely on the 
