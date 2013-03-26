@@ -148,7 +148,7 @@ public:
 	// 
 	// 2. If Probe() is used with option=1 or option=2, then it is advisable to specify
 	// a larger value of edge_num_max (e.g. twice the number of edges in the original energy).
-	QPBO(int node_num_max, int edge_num_max, void (*err_function)(char *) = NULL);
+	QPBO(int node_num_max, int edge_num_max, void (*err_function)(const char *) = NULL);
 	// Copy constructor
 	QPBO(QPBO<REAL>& q);
 
@@ -158,11 +158,11 @@ public:
 	// Save current reparameterisation of the energy to a text file. (Note: possibly twice the energy is saved).
 	// Returns true if success, false otherwise.
 	// 'format' can be 0 or 1. To see what they are, save some simple energy and look at text files.
-	bool Save(char* filename, int format = 0);
+	bool Save(const char* filename, int format = 0);
 	// Load energy from a text file. Current terms of the energy (if any) are destroyed.
 	// Type identifier in the file (int/float/double) should match the type QPBO::REAL.
 	// Returns true if success, false otherwise.
-	bool Load(char* filename);
+	bool Load(const char* filename);
 
 	// Removes all nodes and edges. 
 	// After that functions AddNode(), AddUnaryTerm(), AddPairwiseTerm() must be called again. 
@@ -477,7 +477,7 @@ private:
 
 	DBlock<nodeptr>		*nodeptr_block;
 
-	void	(*error_function)(char *);	// this function is called if a error occurs,
+	void	(*error_function)(const char *);	// this function is called if a error occurs,
 										// with a corresponding error message
 										// (or exit(1) is called if it's NULL)
 
@@ -490,7 +490,7 @@ private:
 
 	/////////////////////////////////////////////////////////////////////////
 
-	void get_type_information(char*& type_name, char*& type_format);
+	void get_type_information(const char*& type_name, const char*& type_format);
 
 	void reallocate_nodes(int node_num_max_new);
 	void reallocate_arcs(int arc_num_max_new);

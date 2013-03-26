@@ -369,7 +369,7 @@ template <typename REAL>
 		}
 	}
 
-	if (i->parent = a0_min)
+	if ((i->parent = a0_min) != 0)
 	{
 		i -> TS = TIME;
 		i -> DIST = d_min + 1;
@@ -446,7 +446,7 @@ template <typename REAL>
 		}
 	}
 
-	if (i->parent = a0_min)
+	if ((i->parent = a0_min) != 0)
 	{
 		i -> TS = TIME;
 		i -> DIST = d_min + 1;

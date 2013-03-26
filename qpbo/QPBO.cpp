@@ -8,15 +8,15 @@
 
 
 template <typename REAL> 
-	QPBO<REAL>::QPBO(int node_num_max, int edge_num_max, void (*err_function)(char *))
+	QPBO<REAL>::QPBO(int node_num_max, int edge_num_max, void (*err_function)(const char *))
 	: node_num(0),
 	  nodeptr_block(NULL),
+	  error_function(err_function),
+	  zero_energy(0),
 	  changed_list(NULL),
-	  fix_node_info_list(NULL),
 	  stage(0),
 	  all_edges_submodular(true),
-	  error_function(err_function),
-	  zero_energy(0)
+	  fix_node_info_list(NULL)
 {
 	node_num_max += 4;
 	if (node_num_max < 16) node_num_max = 16;
@@ -62,12 +62,12 @@ template <typename REAL>
 	QPBO<REAL>::QPBO(QPBO<REAL>& q)
 	: node_num(q.node_num),
 	  nodeptr_block(NULL),
+	  error_function(q.error_function),
+	  zero_energy(q.zero_energy),
 	  changed_list(NULL),
-	  fix_node_info_list(NULL),
 	  stage(q.stage),
 	  all_edges_submodular(q.all_edges_submodular),
-	  error_function(q.error_function),
-	  zero_energy(q.zero_energy)
+	  fix_node_info_list(NULL)
 {
 	int node_num_max = q.node_shift/sizeof(Node);
 	int arc_num_max = (int)(q.arc_max[0] - q.arcs[0]);
@@ -259,7 +259,7 @@ template <typename REAL>
 /////////////////////////////////////////////////////////////////////////
 
 template <typename REAL> 
-	bool QPBO<REAL>::Save(char* filename, int format)
+	bool QPBO<REAL>::Save(const char* filename, int format)
 {
 	int e;
 	int edge_num = 0;
@@ -270,8 +270,8 @@ template <typename REAL>
 		FILE* fp;
 		REAL E0, E1, E00, E01, E10, E11;
 		int i, j;
-		char* type_name;
-		char* type_format;
+		const char* type_name;
+		const char* type_format;
 		char FORMAT_LINE[64];
 		int factor = (stage == 0) ? 2 : 1;
 
@@ -308,8 +308,8 @@ template <typename REAL>
 		REAL E0, E1, E00, E01, E10, E11;
 		int i, j;
 		Arc* a;
-		char* type_name;
-		char* type_format;
+		const char* type_name;
+		const char* type_format;
 
 		if (stage == 0) Solve();
 
@@ -344,13 +344,13 @@ template <typename REAL>
 }
 
 template <typename REAL> 
-	bool QPBO<REAL>::Load(char* filename)
+	bool QPBO<REAL>::Load(const char* filename)
 {
 	FILE* fp;
 	REAL E0, E1, E00, E01, E10, E11;
 	int i, j;
-	char* type_name;
-	char* type_format;
+	const char* type_name;
+	const char* type_format;
 	char LINE[256], FORMAT_LINE_NODE[64], FORMAT_LINE_EDGE[64];
 	int NODE_NUM, EDGE_NUM, K;
 

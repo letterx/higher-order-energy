@@ -707,7 +707,7 @@ template <typename REAL>
 template <typename REAL>
 	bool QPBO<REAL>::Probe(int* mapping)
 {
-	int i_index, i_index_next, j_index;
+	int i_index, i_index_next = -1, j_index;
 	Node* i;
 	Node* j;
 	Node* _i[2];
