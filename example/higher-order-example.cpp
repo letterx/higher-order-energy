@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     }
 
     // Initialize the gaussian kernel for blurring the image
-    InitGaussKernel(sigma, kernelRadius, gaussianKernel);
+    InitGaussKernel(2.0, kernelRadius, gaussianKernel);
 
     char *infilename = argv[1];
     char *outfilename = argv[2];
