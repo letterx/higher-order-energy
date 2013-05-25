@@ -214,40 +214,15 @@ void SetupFusionEnergy(size_t size,
                     ++assignment) 
             {
                 for (unsigned int i = 0; i < size; ++i) {
-                    if (assignment & (1 << i)) { 
+                    if (assignment & (1 << (size-1-i))) { 
                         cliqueLabels[i] = proposed[c._neighborhood[i]];
                     } else {
                         cliqueLabels[i] = current[c._neighborhood[i]];
                     }
                 }
-                Energy energy = c(cliqueLabels);
-                for (unsigned int subset = 1; 
-                        subset < numAssignments; 
-                        ++subset) 
-                {
-                    if (assignment & ~subset) {
-                        continue;
-                    } else {
-                        int parity = 0;
-                        for (unsigned int b = 0; b < size; ++b) {
-                            parity ^= 
-                                (((assignment ^ subset) & (1 << b)) != 0);
-                        }
-                        coeffs[subset] += parity ? -energy : energy;
-                    }
-                }
+                coeffs[assignment] = c(cliqueLabels);
             }
-            int vars[D];
-            for (unsigned int subset = 1; subset < numAssignments; ++subset) {
-                int degree = 0;
-                for (unsigned int b = 0; b < size; ++b) {
-                    if (subset & (1 << b)) {
-                        vars[degree++] = c._neighborhood[b];
-                    }
-                }
-                std::sort(vars, vars+degree);
-                AddTerm(opt, coeffs[subset], degree, vars);
-            }
+            AddClique(opt, size, coeffs, c._neighborhood);
         }
     }
 }

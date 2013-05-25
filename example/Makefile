@@ -4,7 +4,7 @@ QPBO_DIR = ../qpbo
 CXX ?= g++
 DEFS =
 INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR) -I../hocr
-CXX_FLAGS = -O3 -Wall --std=c++11 $(INCLUDES) $(DEFS)
+CXX_FLAGS = -g -Wall --std=c++11 $(INCLUDES) $(DEFS)
 LD_FLAGS = 
 LIBS = -lboost_program_options
 

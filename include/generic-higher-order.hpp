@@ -30,15 +30,15 @@ void AddUnaryTerm(PBF<REAL, D>& opt, int v, REAL coeff) {
 }
 
 template <typename Optimizer, typename Energy>
-void AddTerm(Optimizer& opt, Energy coeff, int d, const int vars[]) {
-    opt.AddTerm(coeff, d, vars);
+void AddClique(Optimizer& opt, int d, const Energy *coeffs, const int *vars) {
+    std::vector<int> vec_vars(vars, vars+d);
+    std::vector<Energy> vec_coeffs(coeffs, coeffs+(1 << d));
+    opt.AddClique(vec_vars, vec_coeffs);
 }
 
 template <typename REAL, int D>
-void AddTerm(PBF<REAL, D>& opt, REAL coeff, int d, const int vars[]) {
-    std::vector<REAL> coeffs(1 << d, 0);
-    coeffs[(1 << d) - 1] = coeff;
-    opt.AddHigherTerm(d, const_cast<int*>(vars), coeffs.data());
+void AddClique(PBF<REAL, D>& opt, int d, const REAL *coeffs, const int *vars) {
+    opt.AddHigherTerm(d, const_cast<int*>(vars), const_cast<REAL*>(coeffs));
 }
 
 #endif

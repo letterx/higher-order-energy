@@ -262,7 +262,7 @@ inline void HigherOrderEnergy<R, D>::AddClique(const std::vector<VarId>& vars,
         int degree = 0;
         for (unsigned int b = 0; b < size; ++b) {
             if (subset & (1 << b)) {
-                subsetVars[degree++] = vars[b];
+                subsetVars[degree++] = vars[size-1-b];
             }
         }
         std::sort(subsetVars, subsetVars+degree);
