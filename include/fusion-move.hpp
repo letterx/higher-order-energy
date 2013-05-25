@@ -87,7 +87,7 @@ void FusionMove(size_t size,
  *
  * Parameters:
  *  size, current, proposed, cliqueSystem same as FusionMove
- *  hoe     Output parameter. Result of setting up the fusion move as a 
+ *  opt     Output parameter. Result of setting up the fusion move as a 
  *              higher-order pseudo-boolean function is put here
  */
 template <typename RandomAccessIterator, 
