@@ -19,6 +19,7 @@
 #include "foe-cliques.hpp"
 #include "image.hpp"
 #include "higher-order.hpp"
+#include "generic-higher-order.hpp"
 
 double sigma = 20.0;
 int kernelRadius;
@@ -35,12 +36,15 @@ int main(int argc, char **argv) {
     // Parse command arguments
     std::string infilename;
     std::string outfilename;
+    std::string optMethod;
+    OptType optType = OptType::Fix;
 
     boost::program_options::options_description desc("Example options");
     desc.add_options()
         ("help", "Display this help message")
         ("infile", boost::program_options::value<std::string>(&infilename)->required(), "Input file to be denoised")
         ("outfile", boost::program_options::value<std::string>(&outfilename)->required(), "Output file for denoised image")
+        ("method", boost::program_options::value<std::string>(&optMethod)->default_value("fix"), "[fix|hocr] -> Method to use for higher-order reduction")
     ;
     boost::program_options::positional_options_description popts;
     popts.add("infile", 1);
@@ -52,6 +56,13 @@ int main(int argc, char **argv) {
 
     try {
         boost::program_options::notify(vm);
+        if (vm.count("method")) {
+            if (vm["method"].as<std::string>() == std::string("hocr")) {
+                optType = OptType::HOCR;
+            } else {
+                optType = OptType::Fix;
+            }
+        }
     } catch (std::exception& e) {
         std::cout << "Parsing error: " << e.what() << "\n";
         std::cout << "Usage: higher-order-example [options] infile outfile\n";
@@ -94,7 +105,7 @@ int main(int argc, char **argv) {
         Image_uc proposed;
         proposed = GetProposedImage(current, i, blur);
 
-        FusionMove(current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques);
+        FusionMove(current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques, optType);
     }
     ImageToFile(current, outfilename.c_str());
     REAL energy  = cliques.Energy(current.Data());
