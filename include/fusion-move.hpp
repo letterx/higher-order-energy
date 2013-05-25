@@ -59,7 +59,8 @@ void FusionMove(size_t size,
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
         const CliqueSystem<Energy, Label, D>& cliqueSystem,
-        QuadraticRep& qr);
+        QuadraticRep& qr,
+        OptType optType = OptType::Fix);
 
 #ifndef NO_QPBO
 /*
@@ -76,7 +77,8 @@ void FusionMove(size_t size,
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
-        const CliqueSystem<Energy, Label, D>& cliqueSystem);
+        const CliqueSystem<Energy, Label, D>& cliqueSystem,
+        OptType optType = OptType::Fix);
 #endif
 
 /*
@@ -129,13 +131,31 @@ void FusionMove(size_t size,
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
         const CliqueSystem<Energy, Label, D>& cliqueSystem,
-        QuadraticRep& qr) 
+        QuadraticRep& qr,
+        OptType optType) 
 {
-    HigherOrderEnergy<Energy, D> hoe;
-    SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
-    hoe.ToQuadratic(qr);
-    qr.Solve();
-    GetFusedImage(size, current, proposed, out, qr);
+    if (optType == OptType::Fix) {
+        HigherOrderEnergy<Energy, D> hoe;
+        SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
+        hoe.ToQuadratic(qr);
+        qr.Solve();
+        qr.ComputeWeakPersistencies();
+        GetFusedImage(size, current, proposed, out, qr);
+    } else if (optType == OptType::HOCR) {
+        PBF<Energy, D> pbf;
+        SetupFusionEnergy(size, current, proposed, cliqueSystem, pbf);
+        PBF<Energy, 2> qr;
+        pbf.toQuadratic(qr);
+        pbf.clear();
+        int numvars = qr.maxID();
+        QPBO<Energy> qpbo(numvars, numvars*4);
+        convert(qpbo, qr);
+        qr.clear();
+        qpbo.MergeParallelEdges();
+        qpbo.Solve();
+        qpbo.ComputeWeakPersistencies();
+        GetFusedImage(size, current, proposed, out, qpbo);
+    }
 }
 
 
@@ -148,10 +168,11 @@ void FusionMove(size_t size,
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
-        const CliqueSystem<Energy, Label, D>& cliqueSystem)
+        const CliqueSystem<Energy, Label, D>& cliqueSystem,
+        OptType optType)
 {
     QPBO<Energy> qr(size, 0);
-    FusionMove(size, current, proposed, out, cliqueSystem, qr);
+    FusionMove(size, current, proposed, out, cliqueSystem, qr, optType);
 }
 #endif
 
