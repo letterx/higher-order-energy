@@ -15,6 +15,7 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/variate_generator.hpp>
+#include <boost/program_options.hpp>
 #include "foe-cliques.hpp"
 #include "image.hpp"
 #include "higher-order.hpp"
@@ -32,18 +33,37 @@ Image_uc ApplyGaussBlur(const Image_uc& im, int radius, const std::vector<double
 
 int main(int argc, char **argv) {
     // Parse command arguments
-    if (argc != 3){
-        std::cerr << "Usage: denoise infile outfile" << std::endl;
+    std::string infilename;
+    std::string outfilename;
+
+    boost::program_options::options_description desc("Example options");
+    desc.add_options()
+        ("help", "Display this help message")
+        ("infile", boost::program_options::value<std::string>(&infilename)->required(), "Input file to be denoised")
+        ("outfile", boost::program_options::value<std::string>(&outfilename)->required(), "Output file for denoised image")
+    ;
+    boost::program_options::positional_options_description popts;
+    popts.add("infile", 1);
+    popts.add("outfile", 1);
+
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
+            options(desc).positional(popts).run(), vm);
+
+    try {
+        boost::program_options::notify(vm);
+    } catch (std::exception& e) {
+        std::cout << "Parsing error: " << e.what() << "\n";
+        std::cout << "Usage: higher-order-example [options] infile outfile\n";
+        std::cout << desc;
         exit(-1);
     }
+
 
     // Initialize the gaussian kernel for blurring the image
     InitGaussKernel(2.0, kernelRadius, gaussianKernel);
 
-    char *infilename = argv[1];
-    char *outfilename = argv[2];
-
-    Image_uc in = ImageFromFile(infilename);
+    Image_uc in = ImageFromFile(infilename.c_str());
     Image_uc current, blur;
     current.Copy(in);
 
@@ -76,7 +96,7 @@ int main(int argc, char **argv) {
 
         FusionMove(current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques);
     }
-    ImageToFile(current, outfilename);
+    ImageToFile(current, outfilename.c_str());
     REAL energy  = cliques.Energy(current.Data());
     std::cout << "Final Energy: " << energy << std::endl;
 

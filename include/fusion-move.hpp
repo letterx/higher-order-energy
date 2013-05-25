@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <boost/foreach.hpp>
-#include "higher-order-energy.hpp"
+#include "generic-higher-order.hpp"
 #include "clique.hpp"
 #ifndef NO_QPBO
 #include "QPBO.h"
@@ -93,12 +93,13 @@ void FusionMove(size_t size,
 template <typename RandomAccessIterator, 
          typename Energy, 
          typename Label, 
+         typename Optimizer,
          int D>
 void SetupFusionEnergy(size_t size,
         RandomAccessIterator current,
         RandomAccessIterator proposed,
         const CliqueSystem<Energy, Label, D>& cliqueSystem,
-        HigherOrderEnergy<Energy, D>& hoe);
+        Optimizer& opt);
 
 /*
  * Given a labeling (according to the results of qr.GetLabel) fuse the images
@@ -157,14 +158,15 @@ void FusionMove(size_t size,
 template <typename RandomAccessIterator, 
     typename Energy, 
     typename Label, 
+    typename Optimizer,
     int D>
 void SetupFusionEnergy(size_t size,
         RandomAccessIterator current,
         RandomAccessIterator proposed,
         const CliqueSystem<Energy, Label, D>& cliqueSystem,
-        HigherOrderEnergy<Energy, D>& hoe)
+        Optimizer& opt)
 {
-    hoe.AddVars(size);
+    AddVars(opt, size);
     typedef typename CliqueSystem<Energy, Label, D>::CliquePointer 
         CliquePointer;
     BOOST_FOREACH(const CliquePointer& cp, cliqueSystem.GetCliques()) {
@@ -176,7 +178,7 @@ void SetupFusionEnergy(size_t size,
         } else if (size == 1) {
             Energy e0 = c(&current[c._neighborhood[0]]);
             Energy e1 = c(&proposed[c._neighborhood[0]]);
-            hoe.AddUnaryTerm(c._neighborhood[0], e1 - e0);
+            AddUnaryTerm(opt, c._neighborhood[0], e1 - e0);
         } else {
             unsigned int numAssignments = 1 << size;
             Energy coeffs[numAssignments];
@@ -214,7 +216,7 @@ void SetupFusionEnergy(size_t size,
                     }
                 }
             }
-            typename HigherOrderEnergy<Energy, D>::VarId vars[D];
+            int vars[D];
             for (unsigned int subset = 1; subset < numAssignments; ++subset) {
                 int degree = 0;
                 for (unsigned int b = 0; b < size; ++b) {
@@ -223,7 +225,7 @@ void SetupFusionEnergy(size_t size,
                     }
                 }
                 std::sort(vars, vars+degree);
-                hoe.AddTerm(coeffs[subset], degree, vars);
+                AddTerm(opt, coeffs[subset], degree, vars);
             }
         }
     }

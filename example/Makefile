@@ -6,7 +6,7 @@ DEFS =
 INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR)
 CXX_FLAGS = -O3 -Wall $(INCLUDES) $(DEFS)
 LD_FLAGS = 
-LIBS = 
+LIBS = -lboost_program_options
 
 EXAMPLE_SRCS = higher-order-example.cpp \
 			   image.cpp \
