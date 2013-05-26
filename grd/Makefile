@@ -29,6 +29,7 @@ OPTIONS = -std=c++0x -O3
 all : $(TARGET)
 
 $(TARGET): $(OBJDIR)main_program.o $(OBJDIR)submodular_tests.o  $(OBJDIR)libpetter.a $(QPBOOBJ) $(MAXFLOWOBJ)
+	mkdir -p bin
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
 	$(LINKER) -L $(LIBDIR) -L $(CLPLIBDIR) $(OBJDIR)main_program.o  $(OBJDIR)submodular_tests.o  $(QPBOOBJ) $(MAXFLOWOBJ) -o $(TARGET) -lpetter -lClp -lCoinUtils -llapack
 

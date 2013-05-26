@@ -155,6 +155,20 @@ void FusionMove(size_t size,
         qpbo.Solve();
         qpbo.ComputeWeakPersistencies();
         GetFusedImage(size, current, proposed, out, qpbo);
+    } else if (optType == OptType::GRD) {
+        Petter::PseudoBoolean<double> pb;
+        SetupFusionEnergy(size, current, proposed, cliqueSystem, pb);
+        std::vector<Petter::label> x(size);
+        int labeled;
+
+        pb.minimize(x, labeled, Petter::GRD);
+        for (size_t i = 0; i < size; ++i) {
+            if (x[i] == 1) {
+                out[i] = proposed[i];
+            } else {
+                out[i] = current[i];
+            }
+        }
     }
 }
 
@@ -238,11 +252,10 @@ void GetFusedImage(size_t size,
         int label = qr.GetLabel(i);
         if (label == 1) {
             out[i] = proposed[i];
-        } else if (label == 0) {
-            out[i] = current[i];
         } else {
             out[i] = current[i];
         }
     }
 }
+
 #endif

@@ -1,12 +1,13 @@
 HIGHER_ORDER_DIR = ../include
 QPBO_DIR = ../qpbo
+CLPLIBDIR = ~/src/coin-Clp/lib/
 
 CXX ?= g++
 DEFS =
-INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR) -I../hocr
-CXX_FLAGS = -g -Wall --std=c++11 $(INCLUDES) $(DEFS)
-LD_FLAGS = 
-LIBS = -lboost_program_options
+INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR) -I../hocr -I../grd/source/library/
+CXX_FLAGS = -O3 -Wall --std=c++11 $(INCLUDES) $(DEFS)
+LD_FLAGS = -L../grd/obj/submodular/ -L $(CLPLIBDIR)
+LIBS = -lboost_program_options -lpetter -lClp -lCoinUtils -llapack
 
 EXAMPLE_SRCS = higher-order-example.cpp \
 			   image.cpp \
@@ -16,16 +17,24 @@ EXAMPLE_OBJS = $(EXAMPLE_SRCS:.cpp=.o)
 QPBO_SRCS = $(QPBO_DIR)/QPBO.cpp
 QPBO_OBJS = $(QPBO_SRCS:.cpp=.o)
 
+MAXFLOW_OBJS = ../grd/obj/submodular/graph.o ../grd/obj/submodular/maxflow.o
+
+LIBPETTER = ../grd/obj/submodular/libpetter.a
+
 TARGET = higher-order-example
 
 .PHONY: all
 all: $(TARGET)
 
-$(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS)
-	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ $(EXAMPLE_OBJS) $(QPBO_OBJS) $(LIBS)
+$(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS) $(LIBPETTER)
+	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
+	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ $(EXAMPLE_OBJS) $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
 
 %.o: %.cpp
 	$(CXX) $(CXX_FLAGS) -o $@ -c $<
+
+$(LIBPETTER): $(QPBO_OBJS)
+	cd ../grd; make
 
 .PHONY: test
 test: $(TARGET)
@@ -38,6 +47,7 @@ clean:
 	rm -f *.o
 	rm -f *.P
 	rm -f *.d
+	cd ../grd; make clean
 
 .PHONY: distclean
 distclean: clean

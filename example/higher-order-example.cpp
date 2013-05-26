@@ -57,8 +57,11 @@ int main(int argc, char **argv) {
     try {
         boost::program_options::notify(vm);
         if (vm.count("method")) {
-            if (vm["method"].as<std::string>() == std::string("hocr")) {
+            std::string m = vm["method"].as<std::string>();
+            if (m == std::string("hocr")) {
                 optType = OptType::HOCR;
+            } else if (m == std::string("grd")) {
+                optType = OptType::GRD;
             } else {
                 optType = OptType::Fix;
             }
