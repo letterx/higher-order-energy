@@ -62,6 +62,8 @@ int main(int argc, char **argv) {
                 optType = OptType::HOCR;
             } else if (m == std::string("grd")) {
                 optType = OptType::GRD;
+            } else if (m == std::string("grd-heur")) {
+                optType = OptType::GRD_Heur;
             } else {
                 optType = OptType::Fix;
             }

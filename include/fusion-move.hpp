@@ -169,6 +169,20 @@ void FusionMove(size_t size,
                 out[i] = current[i];
             }
         }
+    } else if (optType == OptType::GRD_Heur) {
+        Petter::PseudoBoolean<Energy> pb;
+        SetupFusionEnergy(size, current, proposed, cliqueSystem, pb);
+        std::vector<Petter::label> x(size);
+        int labeled;
+
+        pb.minimize(x, labeled, Petter::GRD_heur);
+        for (size_t i = 0; i < size; ++i) {
+            if (x[i] == 1) {
+                out[i] = proposed[i];
+            } else {
+                out[i] = current[i];
+            }
+        }
     }
 }
 

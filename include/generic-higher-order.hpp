@@ -8,7 +8,8 @@
 enum class OptType {
     Fix,
     HOCR,
-    GRD
+    GRD,
+    GRD_Heur
 };
 
 template <typename Optimizer>
