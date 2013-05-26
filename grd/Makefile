@@ -44,24 +44,30 @@ test: $(TARGET)
 
 # Main program; compile with -Wall -pedantic
 $(OBJDIR)main_program.o: source/main_program.cpp source/library/PseudoBoolean.h source/library/Posiform.h
+	mkdir -p $(OBJDIR)
 	$(COMPILER) $(OPTIONS) -Wall -pedantic $(INCLUDE) source/main_program.cpp -o $(OBJDIR)main_program.o
 $(OBJDIR)submodular_tests.o: source/submodular_tests.cpp source/library/PseudoBoolean.h
+	mkdir -p $(OBJDIR)
 	$(COMPILER) $(OPTIONS) -Wall -pedantic $(INCLUDE) source/submodular_tests.cpp -o $(OBJDIR)submodular_tests.o
 #$(OBJDIR)posiform_tests.o: source/posiform_tests.cpp source/library/PseudoBoolean.h source/library/Posiform.h source/library/VertexPacking.h
 #	$(COMPILER) $(OPTIONS) -Wall -Werror -pedantic-errors $(INCLUDE) source/posiform_tests.cpp -o $(OBJDIR)posiform_tests.o
 # Main program; -pedantic-errors not possible since it includes QPBO.h
 $(OBJDIR)image_denoising.o: source/image_denoising.cpp
+	mkdir -p $(OBJDIR)
 	$(COMPILER) $(OPTIONS) -Wall -Werror $(INCLUDE) source/image_denoising.cpp -o $(OBJDIR)image_denoising.o 
 
 $(LIBDIR)libpetter.a : $(SUBMOBJ) $(OBJDIR)Petter-Color.o
+	mkdir -p $(LIBDIR)
 	ar rcs $(LIBDIR)libpetter.a $(OBJDIR)Petter-Color.o $(SUBMOBJ)
 
 # Library
 $(OBJDIR)Petter-Color.o: thirdparty/Petter/Petter-Color.cc thirdparty/Petter/Petter-Color.h
+	mkdir -p $(OBJDIR)
 	$(COMPILER) $(OPTIONS) -Wall -pedantic $(INCLUDE) thirdparty/Petter/Petter-Color.cc -o $(OBJDIR)Petter-Color.o	
 
 # Library
 $(OBJDIR)%.o: source/library/%.cpp source/library/PseudoBoolean.h
+	mkdir -p $(OBJDIR)
 	$(COMPILER) $(OPTIONS) -Wall $(INCLUDE) -I $(CLPINCLUDEDIR)  $< -o $@
 
 ../qpbo/QPBO.o: ../qpbo/QPBO.cpp
@@ -69,6 +75,7 @@ $(OBJDIR)%.o: source/library/%.cpp source/library/PseudoBoolean.h
 
 # Will generate warnings in g++ 4.5
 $(OBJDIR)%.o: thirdparty/maxflow-v3.01.src/%.cpp
+	mkdir -p $(OBJDIR)
 	$(COMPILER) $(OPTIONS) $(INCLUDE) $< -o $@
 
 
