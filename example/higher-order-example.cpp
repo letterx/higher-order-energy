@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <chrono>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/variate_generator.hpp>
@@ -19,7 +20,6 @@
 #include "foe-cliques.hpp"
 #include "image.hpp"
 #include "higher-order.hpp"
-#include "generic-higher-order.hpp"
 
 double sigma = 20.0;
 int kernelRadius;
@@ -34,21 +34,23 @@ Image_uc ApplyGaussBlur(const Image_uc& im, int radius, const std::vector<double
 
 int main(int argc, char **argv) {
     // Parse command arguments
+    std::string basename;
     std::string infilename;
     std::string outfilename;
     std::string optMethod;
     OptType optType = OptType::Fix;
 
+    int iterations;
+
     boost::program_options::options_description desc("Example options");
     desc.add_options()
         ("help", "Display this help message")
-        ("infile", boost::program_options::value<std::string>(&infilename)->required(), "Input file to be denoised")
-        ("outfile", boost::program_options::value<std::string>(&outfilename)->required(), "Output file for denoised image")
+        ("image", boost::program_options::value<std::string>(&basename)->required(), "Base name of image file (without extension)")
         ("method", boost::program_options::value<std::string>(&optMethod)->default_value("fix"), "[fix|hocr] -> Method to use for higher-order reduction")
+        ("iters,i", boost::program_options::value<int>(&iterations)->default_value(300), "Number of iterations to run")
     ;
     boost::program_options::positional_options_description popts;
-    popts.add("infile", 1);
-    popts.add("outfile", 1);
+    popts.add("image", 1);
 
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
@@ -70,10 +72,12 @@ int main(int argc, char **argv) {
         }
     } catch (std::exception& e) {
         std::cout << "Parsing error: " << e.what() << "\n";
-        std::cout << "Usage: higher-order-example [options] infile outfile\n";
+        std::cout << "Usage: higher-order-example [options] basename\n";
         std::cout << desc;
         exit(-1);
     }
+    infilename = basename + ".pgm";
+    outfilename = basename + "-" + optMethod + ".pgm";
 
 
     // Initialize the gaussian kernel for blurring the image
@@ -91,12 +95,16 @@ int main(int argc, char **argv) {
     // when we reach convergence
     REAL energies[thresholdIters];
 
-    int iterations = 300;
+    std::vector<FusionStats> allStats;
+    std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now();
 
     for (int i = 0; i < iterations; ++i) {
         std::cout << "Iteration " << i+1 << std::endl;
+        FusionStats stats;
+        stats.iter = i;
 
         REAL energy  = cliques.Energy(current.Data()); 
+        stats.initialEnergy = energy;
         // check if we've reached convergence
         if (i > thresholdIters 
                 && energies[i%thresholdIters] - energy < threshold) {
@@ -110,11 +118,31 @@ int main(int argc, char **argv) {
         Image_uc proposed;
         proposed = GetProposedImage(current, i, blur);
 
-        FusionMove(current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques, optType);
+        FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques, optType);
+        stats.finalEnergy = cliques.Energy(current.Data());
+        std::chrono::duration<double> cumulativeTime = (std::chrono::system_clock::now() - startTime);
+        stats.cumulativeTime = cumulativeTime.count();
+        allStats.push_back(stats);
     }
     ImageToFile(current, outfilename.c_str());
     REAL energy  = cliques.Energy(current.Data());
     std::cout << "Final Energy: " << energy << std::endl;
+
+    std::string statsName = basename + "-" + optMethod + ".stats";
+    std::ofstream statsFile(statsName);
+    for (const FusionStats& s : allStats) {
+        statsFile << s.iter << " ";
+        statsFile << s.numVars << " ";
+        statsFile << s.additionalVars << " ";
+        statsFile << s.labeled << " ";
+        statsFile << s.swaps << " ";
+        statsFile << s.time << " ";
+        statsFile << s.cumulativeTime << " ";
+        statsFile << s.initialEnergy << " ";
+        statsFile << s.finalEnergy << " ";
+        statsFile << "\n";
+    }
+
 
     return 0;
 }

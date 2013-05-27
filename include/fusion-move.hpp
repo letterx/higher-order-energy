@@ -3,12 +3,14 @@
 
 #include <iostream>
 #include <sstream>
+#include <chrono>
 #include <boost/foreach.hpp>
 #include "generic-higher-order.hpp"
 #include "clique.hpp"
 #ifndef NO_QPBO
 #include "QPBO.h"
 #endif
+#include "fusion-stats.hpp"
 
 /*
  * fusion-move.hpp
@@ -54,7 +56,8 @@ template <typename RandomAccessIterator,
          typename Label, 
          int D, 
          typename QuadraticRep>
-void FusionMove(size_t size, 
+void FusionMove(FusionStats& stats,
+        size_t size, 
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
@@ -73,7 +76,8 @@ template <typename RandomAccessIterator,
          typename Energy, 
          typename Label, 
          int D>
-void FusionMove(size_t size, 
+void FusionMove(FusionStats& stats,
+        size_t size, 
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
@@ -126,7 +130,8 @@ template <typename RandomAccessIterator,
     typename Label, 
     int D, 
     typename QuadraticRep>
-void FusionMove(size_t size, 
+void FusionMove(FusionStats& stats,
+        size_t size, 
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
@@ -134,13 +139,14 @@ void FusionMove(size_t size,
         QuadraticRep& qr,
         OptType optType) 
 {
+    std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
     if (optType == OptType::Fix) {
         HigherOrderEnergy<Energy, D> hoe;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
         hoe.ToQuadratic(qr);
         qr.Solve();
         qr.ComputeWeakPersistencies();
-        GetFusedImage(size, current, proposed, out, qr);
+        GetFusedImage(stats, size, current, proposed, out, qr);
     } else if (optType == OptType::HOCR) {
         PBF<Energy, D> pbf;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, pbf);
@@ -154,7 +160,7 @@ void FusionMove(size_t size,
         qpbo.MergeParallelEdges();
         qpbo.Solve();
         qpbo.ComputeWeakPersistencies();
-        GetFusedImage(size, current, proposed, out, qpbo);
+        GetFusedImage(stats, size, current, proposed, out, qpbo);
     } else if (optType == OptType::GRD) {
         Petter::PseudoBoolean<double> pb;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, pb);
@@ -164,7 +170,12 @@ void FusionMove(size_t size,
         pb.minimize(x, labeled, Petter::GRD);
         for (size_t i = 0; i < size; ++i) {
             if (x[i] == 1) {
+                stats.labeled++;
+                stats.swaps++;
                 out[i] = proposed[i];
+            } else if (x[i] == 0) {
+                stats.labeled++;
+                out[i] = current[i];
             } else {
                 out[i] = current[i];
             }
@@ -178,12 +189,19 @@ void FusionMove(size_t size,
         pb.minimize(x, labeled, Petter::GRD_heur);
         for (size_t i = 0; i < size; ++i) {
             if (x[i] == 1) {
+                stats.labeled++;
+                stats.swaps++;
                 out[i] = proposed[i];
+            } else if (x[i] == 0) {
+                stats.labeled++;
+                out[i] = current[i];
             } else {
                 out[i] = current[i];
             }
         }
     }
+    std::chrono::duration<double> time = std::chrono::system_clock::now() - start;
+    stats.time = time.count();
 }
 
 
@@ -192,7 +210,8 @@ template <typename RandomAccessIterator,
     typename Energy, 
     typename Label, 
     int D>
-void FusionMove(size_t size, 
+void FusionMove(FusionStats& stats,
+        size_t size, 
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
@@ -200,7 +219,7 @@ void FusionMove(size_t size,
         OptType optType)
 {
     QPBO<Energy> qr(size, 0);
-    FusionMove(size, current, proposed, out, cliqueSystem, qr, optType);
+    FusionMove(stats, size, current, proposed, out, cliqueSystem, qr, optType);
 }
 #endif
 
@@ -256,7 +275,8 @@ void SetupFusionEnergy(size_t size,
 }
 
 template <typename RandomAccessIterator, typename QuadraticRep>
-void GetFusedImage(size_t size, 
+void GetFusedImage(FusionStats& stats,
+        size_t size, 
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
@@ -265,7 +285,12 @@ void GetFusedImage(size_t size,
     for (size_t i = 0; i < size; ++i) {
         int label = qr.GetLabel(i);
         if (label == 1) {
+            stats.labeled++;
+            stats.swaps++;
             out[i] = proposed[i];
+        } else if (label == 0) {
+            stats.labeled++;
+            out[i] = current[i];
         } else {
             out[i] = current[i];
         }

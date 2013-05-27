@@ -4,6 +4,8 @@
 #include "clique.hpp"
 #include "fusion-move.hpp"
 #include "higher-order-energy.hpp"
+#include "generic-higher-order.hpp"
+#include "fusion-stats.hpp"
 
 
 #endif
