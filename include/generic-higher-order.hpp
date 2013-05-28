@@ -4,6 +4,7 @@
 #include "higher-order-energy.hpp"
 #include "HOCR.h"
 #include "PseudoBoolean.h"
+#include <string>
 
 enum class OptType {
     Fix,
@@ -11,6 +12,16 @@ enum class OptType {
     GRD,
     GRD_Heur
 };
+
+inline std::string ToString(OptType ot) {
+    switch (ot) {
+        case OptType::Fix: return "fix";
+        case OptType::HOCR: return "hocr";
+        case OptType::GRD: return "grd";
+        case OptType::GRD_Heur: return "grd-heur";
+        default: return "unknown";
+    }
+}
 
 template <typename Optimizer>
 void AddVars(Optimizer& opt, size_t numVars) {

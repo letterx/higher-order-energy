@@ -27,47 +27,64 @@ std::vector<double> gaussianKernel;
 REAL threshold = 100.0 * DoubleToREAL;
 int thresholdIters = 20;
 
+// Set up the RNGs
+static boost::mt19937 rng;
+static boost::uniform_int<> uniform255(0, 255);
+static boost::uniform_int<> uniform3sigma(-1.5*sigma, 1.5*sigma);
+static boost::variate_generator<boost::mt19937&, boost::uniform_int<> > noise255(rng, uniform255);
+static boost::variate_generator<boost::mt19937&, boost::uniform_int<> > noise3sigma(rng, uniform3sigma);
+
+
 Image_uc GetProposedImage(const Image_uc& im, unsigned int iteration, Image_uc& blur);
 CliqueSystem<REAL, unsigned char, 4> SetupCliques(const Image_uc& im);
 void InitGaussKernel(double sigma, int& radius, std::vector<double>& kernel);
 Image_uc ApplyGaussBlur(const Image_uc& im, int radius, const std::vector<double>& kernel);
 
 int main(int argc, char **argv) {
+    namespace po = boost::program_options;
     // Parse command arguments
     std::string basename;
     std::string infilename;
     std::string outfilename;
-    std::string optMethod;
-    OptType optType = OptType::Fix;
+    std::vector<std::string> param_methods;
+    std::vector<OptType> methods;
+    bool lockstep;
 
     int iterations;
 
-    boost::program_options::options_description desc("Example options");
+    po::options_description desc("Example options");
     desc.add_options()
         ("help", "Display this help message")
-        ("image", boost::program_options::value<std::string>(&basename)->required(), "Base name of image file (without extension)")
-        ("method", boost::program_options::value<std::string>(&optMethod)->default_value("fix"), "[fix|hocr] -> Method to use for higher-order reduction")
-        ("iters,i", boost::program_options::value<int>(&iterations)->default_value(300), "Number of iterations to run")
+        ("image", po::value<std::string>(&basename)->required(), "Base name of image file (without extension)")
+        ("method,m", po::value<std::vector<std::string>>(&param_methods), "[fix|hocr] -> Method to use for higher-order reduction")
+        ("iters,i", po::value<int>(&iterations)->default_value(300), "Number of iterations to run")
+        ("lockstep", po::value<bool>(&lockstep)->default_value(false), "Run in lockstep mode: all methods have same energy problems to solve, determined by first method specified")
     ;
-    boost::program_options::positional_options_description popts;
+    po::positional_options_description popts;
     popts.add("image", 1);
 
-    boost::program_options::variables_map vm;
-    boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
+    po::variables_map vm;
+    po::store(po::command_line_parser(argc, argv).
             options(desc).positional(popts).run(), vm);
 
     try {
-        boost::program_options::notify(vm);
-        if (vm.count("method")) {
-            std::string m = vm["method"].as<std::string>();
-            if (m == std::string("hocr")) {
-                optType = OptType::HOCR;
-            } else if (m == std::string("grd")) {
-                optType = OptType::GRD;
-            } else if (m == std::string("grd-heur")) {
-                optType = OptType::GRD_Heur;
-            } else {
-                optType = OptType::Fix;
+        po::notify(vm);
+        if (param_methods.empty()) {
+            methods.push_back(OptType::Fix);
+        } else {
+            for (const std::string& m : param_methods) {
+                if (m == std::string("hocr")) {
+                    methods.push_back(OptType::HOCR);
+                } else if (m == std::string("grd")) {
+                    methods.push_back(OptType::GRD);
+                } else if (m == std::string("grd-heur")) {
+                    methods.push_back(OptType::GRD_Heur);
+                } else if (m == std::string("fix")) {
+                    methods.push_back(OptType::Fix);
+                } else {
+                    std::cout << "Unrecognized method type: " << m << "\n";
+                    exit(-1);
+                }
             }
         }
     } catch (std::exception& e) {
@@ -77,7 +94,6 @@ int main(int argc, char **argv) {
         exit(-1);
     }
     infilename = basename + ".pgm";
-    outfilename = basename + "-" + optMethod + ".pgm";
 
 
     // Initialize the gaussian kernel for blurring the image
@@ -85,7 +101,6 @@ int main(int argc, char **argv) {
 
     Image_uc in = ImageFromFile(infilename.c_str());
     Image_uc current, blur;
-    current.Copy(in);
 
     // Set up the clique system, which defines the energy to be minimized
     // by fusion move
@@ -95,52 +110,86 @@ int main(int argc, char **argv) {
     // when we reach convergence
     REAL energies[thresholdIters];
 
-    std::vector<FusionStats> allStats;
-    std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now();
+    std::map<OptType, std::vector<FusionStats>> allStats;
 
-    for (int i = 0; i < iterations; ++i) {
-        std::cout << "Iteration " << i+1 << std::endl;
-        FusionStats stats;
-        stats.iter = i;
+    std::vector<OptType> full_run_methods; //Methods to run the full optimization on
+    if (lockstep)
+        full_run_methods.push_back(methods[0]);
+    else
+        full_run_methods = methods;
+        
+    for (OptType ot : full_run_methods) {
+        current.Copy(in);
+        rng.seed(0);
+        std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now();
+        for (int i = 0; i < iterations; ++i) {
+            std::cout << "Iteration " << i+1 << "\t\t";
+            FusionStats stats;
+            stats.iter = i;
 
-        REAL energy  = cliques.Energy(current.Data()); 
-        stats.initialEnergy = energy;
-        // check if we've reached convergence
-        if (i > thresholdIters 
-                && energies[i%thresholdIters] - energy < threshold) {
-            break;
+            REAL energy  = cliques.Energy(current.Data()); 
+            stats.initialEnergy = energy;
+            // check if we've reached convergence
+            if (i > thresholdIters 
+                    && energies[i%thresholdIters] - energy < threshold) {
+                break;
+            }
+            // Do some statistic gathering
+            energies[i%thresholdIters] = energy;
+            std::cout << "Current Energy: " << (double)energy / DoubleToREAL << std::endl;
+
+            // Real work here: get proposed image, then fuse it with current image
+            Image_uc proposed;
+            proposed = GetProposedImage(current, i, blur);
+
+            if (lockstep) {
+                std::vector<Image_uc> outputs;
+                for (OptType lockstep_ot : methods) {
+                    std::cout << "\t" << ToString(lockstep_ot) << "...\t";
+                    std::cout.flush();
+                    Image_uc tmp(current.Height(), current.Width());
+                    FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), tmp.Data(), cliques, lockstep_ot);
+                    REAL e = cliques.Energy(tmp.Data()); 
+                    std::cout << e << "\n";
+
+                    stats.finalEnergy = e;
+                    std::chrono::duration<double> cumulativeTime = (std::chrono::system_clock::now() - startTime);
+                    stats.cumulativeTime = cumulativeTime.count();
+                    allStats[lockstep_ot].push_back(stats);
+                    outputs.push_back(tmp);
+                }
+                current.Copy(outputs[0]);
+            } else {
+                FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques, ot);
+                stats.finalEnergy = cliques.Energy(current.Data());
+                std::chrono::duration<double> cumulativeTime = (std::chrono::system_clock::now() - startTime);
+                stats.cumulativeTime = cumulativeTime.count();
+                allStats[ot].push_back(stats);
+            }
         }
-        // Do some statistic gathering
-        energies[i%thresholdIters] = energy;
-        std::cout << "    Current Energy: " << (double)energy / DoubleToREAL << std::endl;
-
-        // Real work here: get proposed image, then fuse it with current image
-        Image_uc proposed;
-        proposed = GetProposedImage(current, i, blur);
-
-        FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques, optType);
-        stats.finalEnergy = cliques.Energy(current.Data());
-        std::chrono::duration<double> cumulativeTime = (std::chrono::system_clock::now() - startTime);
-        stats.cumulativeTime = cumulativeTime.count();
-        allStats.push_back(stats);
+        std::string optMethod = ToString(ot);
+        outfilename = basename + "-" + optMethod + ".pgm";
+        ImageToFile(current, outfilename.c_str());
+        REAL energy  = cliques.Energy(current.Data());
+        std::cout << "Final Energy: " << energy << std::endl;
     }
-    ImageToFile(current, outfilename.c_str());
-    REAL energy  = cliques.Energy(current.Data());
-    std::cout << "Final Energy: " << energy << std::endl;
 
-    std::string statsName = basename + "-" + optMethod + ".stats";
-    std::ofstream statsFile(statsName);
-    for (const FusionStats& s : allStats) {
-        statsFile << s.iter << " ";
-        statsFile << s.numVars << " ";
-        statsFile << s.additionalVars << " ";
-        statsFile << s.labeled << " ";
-        statsFile << s.swaps << " ";
-        statsFile << s.time << " ";
-        statsFile << s.cumulativeTime << " ";
-        statsFile << s.initialEnergy << " ";
-        statsFile << s.finalEnergy << " ";
-        statsFile << "\n";
+    for (OptType ot : methods) {
+        std::string optMethod = ToString(ot);
+        std::string statsName = basename + "-" + optMethod + ".stats";
+        std::ofstream statsFile(statsName);
+        for (const FusionStats& s : allStats[ot]) {
+            statsFile << s.iter << " ";
+            statsFile << s.numVars << " ";
+            statsFile << s.additionalVars << " ";
+            statsFile << s.labeled << " ";
+            statsFile << s.swaps << " ";
+            statsFile << s.time << " ";
+            statsFile << s.cumulativeTime << " ";
+            statsFile << double(s.initialEnergy) / DoubleToREAL  << " ";
+            statsFile << double(s.finalEnergy) / DoubleToREAL << " ";
+            statsFile << "\n";
+        }
     }
 
 
@@ -148,13 +197,6 @@ int main(int argc, char **argv) {
 }
 
 Image_uc GetProposedImage(const Image_uc& im, unsigned int iteration, Image_uc& blur) {
-    // Set up the RNGs
-    static boost::mt19937 rng;
-    static boost::uniform_int<> uniform255(0, 255);
-    static boost::uniform_int<> uniform3sigma(-1.5*sigma, 1.5*sigma);
-    static boost::variate_generator<boost::mt19937&, boost::uniform_int<> > noise255(rng, uniform255);
-    static boost::variate_generator<boost::mt19937&, boost::uniform_int<> > noise3sigma(rng, uniform3sigma);
-
     Image_uc proposed(im.Height(), im.Width());
     if (iteration % 2 == 0) {
         // On even iterations, proposal is a gaussian-blurred version of the 
