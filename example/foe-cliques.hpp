@@ -48,4 +48,26 @@ class FoEUnaryEnergy : public CliqueEnergy<REAL, unsigned char, 4> {
         unsigned char _orig;
 };
 
+
+class FoE3x3Energy : public CliqueEnergy<REAL, unsigned char, 9> {
+    public:
+        FoE3x3Energy(int size, int nbd[])
+            : CliqueEnergy<REAL, unsigned char, 9>(size, nbd) { }
+        virtual REAL operator()(const unsigned char buf[]) const;
+
+        static void InitFoE3x3();
+};
+
+class FoE3x3UnaryEnergy : public CliqueEnergy<REAL, unsigned char, 9> {
+    public:
+        FoE3x3UnaryEnergy(int *index, unsigned char originalImagePixel) 
+            : CliqueEnergy<REAL, unsigned char, 9>(1, index),
+              _orig(originalImagePixel) { }
+
+        virtual REAL operator()(const unsigned char buf[]) const;
+        static double sigma;
+
+    private:
+        unsigned char _orig;
+};
 #endif

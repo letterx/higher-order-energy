@@ -24,11 +24,15 @@ LIBPETTER = ../grd/obj/submodular/libpetter.a
 TARGET = higher-order-example
 
 .PHONY: all
-all: $(TARGET)
+all: $(TARGET) foe-9
 
 $(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ $(EXAMPLE_OBJS) $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
+
+foe-9: foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
+	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
+	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
 
 %.o: %.cpp
 	$(CXX) $(CXX_FLAGS) -o $@ -c $<
