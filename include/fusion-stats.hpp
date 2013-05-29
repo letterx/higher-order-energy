@@ -12,10 +12,11 @@ struct FusionStats {
     double cumulativeTime;
     double initialEnergy;
     double finalEnergy;
+    double psnr;
 
     FusionStats()
         : iter(0), numVars(0), additionalVars(0), labeled(0), swaps(0),
-        time(0), cumulativeTime(0), initialEnergy(0), finalEnergy(0)
+        time(0), cumulativeTime(0), initialEnergy(0), finalEnergy(0), psnr(0)
     { }
 };
 

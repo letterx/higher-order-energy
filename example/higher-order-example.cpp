@@ -39,6 +39,7 @@ Image_uc GetProposedImage(const Image_uc& im, unsigned int iteration, Image_uc& 
 CliqueSystem<REAL, unsigned char, 4> SetupCliques(const Image_uc& im);
 void InitGaussKernel(double sigma, int& radius, std::vector<double>& kernel);
 Image_uc ApplyGaussBlur(const Image_uc& im, int radius, const std::vector<double>& kernel);
+double getPSNR(const Image_uc& d, const Image_uc& o);
 
 int main(int argc, char **argv) {
     namespace po = boost::program_options;
@@ -49,6 +50,9 @@ int main(int argc, char **argv) {
     std::vector<std::string> param_methods;
     std::vector<OptType> methods;
     bool lockstep;
+    bool computePSNR;
+    std::string original_name;
+
 
     int iterations;
 
@@ -59,6 +63,7 @@ int main(int argc, char **argv) {
         ("method,m", po::value<std::vector<std::string>>(&param_methods), "[fix|hocr] -> Method to use for higher-order reduction")
         ("iters,i", po::value<int>(&iterations)->default_value(300), "Number of iterations to run")
         ("lockstep", po::value<bool>(&lockstep)->default_value(false), "Run in lockstep mode: all methods have same energy problems to solve, determined by first method specified")
+        ("original,o", po::value<std::string>(&original_name)->default_value(""), "Filename for original image -- for computing PSNR")
     ;
     po::positional_options_description popts;
     popts.add("image", 1);
@@ -101,6 +106,13 @@ int main(int argc, char **argv) {
 
     Image_uc in = ImageFromFile(infilename.c_str());
     Image_uc current, blur;
+
+    Image_uc original;
+    if (original_name != std::string("")) {
+        original = ImageFromFile(original_name.c_str());
+        computePSNR = true;
+    }
+
 
     // Set up the clique system, which defines the energy to be minimized
     // by fusion move
@@ -153,6 +165,8 @@ int main(int argc, char **argv) {
                     std::cout << e << "\n";
 
                     stats.finalEnergy = e;
+                    if (computePSNR)
+                        stats.psnr = getPSNR(tmp, original);
                     std::chrono::duration<double> cumulativeTime = (std::chrono::system_clock::now() - startTime);
                     stats.cumulativeTime = cumulativeTime.count();
                     allStats[lockstep_ot].push_back(stats);
@@ -162,6 +176,8 @@ int main(int argc, char **argv) {
             } else {
                 FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques, ot);
                 stats.finalEnergy = cliques.Energy(current.Data());
+                if (computePSNR)
+                    stats.psnr = getPSNR(current, original);
                 std::chrono::duration<double> cumulativeTime = (std::chrono::system_clock::now() - startTime);
                 stats.cumulativeTime = cumulativeTime.count();
                 allStats[ot].push_back(stats);
@@ -188,6 +204,7 @@ int main(int argc, char **argv) {
             statsFile << s.cumulativeTime << " ";
             statsFile << double(s.initialEnergy) / DoubleToREAL  << " ";
             statsFile << double(s.finalEnergy) / DoubleToREAL << " ";
+            statsFile << s.psnr << " ";
             statsFile << "\n";
         }
     }
@@ -294,3 +311,15 @@ Image_uc ApplyGaussBlur(const Image_uc& im, int radius, const std::vector<double
     }
     return horizontal;
 }
+
+double getPSNR(const Image_uc& d, const Image_uc& o)
+{
+    int N = o.Height() * o.Width();
+	int s = 0;
+	for (int i = 0; i < N; i++) {
+        int diff = d.At(i) - o.At(i);
+        s += diff * diff;
+    }
+	return 20 * log10(255.0 / sqrt((double)s / N));
+}
+
