@@ -36,6 +36,7 @@ static boost::variate_generator<boost::mt19937&, boost::uniform_int<> > noise3si
 
 
 Image_uc GetProposedImage(const Image_uc& im, unsigned int iteration, Image_uc& blur);
+Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, CliqueSystem<REAL, unsigned char, 9> &cs, double eta);
 CliqueSystem<REAL, unsigned char, 9> SetupCliques(const Image_uc& im);
 void InitGaussKernel(double sigma, int& radius, std::vector<double>& kernel);
 Image_uc ApplyGaussBlur(const Image_uc& im, int radius, const std::vector<double>& kernel);
@@ -52,6 +53,8 @@ int main(int argc, char **argv) {
     bool lockstep;
     bool computePSNR;
     std::string original_name;
+    bool grad_descent;
+    double eta;
 
 
     int iterations;
@@ -64,6 +67,8 @@ int main(int argc, char **argv) {
         ("iters,i", po::value<int>(&iterations)->default_value(300), "Number of iterations to run")
         ("lockstep", po::value<bool>(&lockstep)->default_value(false), "Run in lockstep mode: all methods have same energy problems to solve, determined by first method specified")
         ("original,o", po::value<std::string>(&original_name)->default_value(""), "Filename for original image -- for computing PSNR")
+        ("grad,g", po::value<bool>(&grad_descent)->default_value(false), "Flag for using gradient descent proposals")
+        ("eta", po::value<double>(&eta)->default_value(60.0), "Scale for gradient descent proposals")
     ;
     po::positional_options_description popts;
     popts.add("image", 1);
@@ -152,7 +157,10 @@ int main(int argc, char **argv) {
 
             // Real work here: get proposed image, then fuse it with current image
             Image_uc proposed;
-            proposed = GetProposedImage(current, i, blur);
+            if (grad_descent)
+                proposed = GetProposedImageGrad(current, i, cliques, eta);
+            else
+                proposed = GetProposedImage(current, i, blur);
 
             if (lockstep) {
                 std::vector<Image_uc> outputs;
@@ -234,6 +242,26 @@ Image_uc GetProposedImage(const Image_uc& im, unsigned int iteration, Image_uc& 
                 proposed(i, j) = (unsigned char)(noise255());
             }
         }
+    }
+    return proposed;
+}
+
+Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, CliqueSystem<REAL, unsigned char, 9> &cs, double eta) {
+    int size = im.Height() * im.Width();
+    boost::shared_array<double> grad(new double[size]);
+    for (int i = 0; i < size; ++i)
+        grad[i] = 0.0;
+    for(const auto& cp : cs.GetCliques())
+        cp->AddGradient(grad.get(), im.Data());
+    Image_uc proposed(im.Height(), im.Width());
+    for (int i = 0; i < size; ++i) {
+        double value = ((double)im.At(i) - grad[i] * eta/(iteration + 1));
+        if (value < 0)
+            value = 0;
+        if (value > 255)
+            value = 255;
+        proposed.At(i) = (unsigned char) value;
+        //proposed.At(i) = (unsigned char)(double)im.At(i);
     }
     return proposed;
 }

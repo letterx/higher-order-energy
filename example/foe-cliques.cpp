@@ -110,3 +110,41 @@ REAL FoE3x3UnaryEnergy::operator()(const unsigned char buf[]) const {
         double e = dist*dist / (sigma*sigma * 2);
         return DoubleToREAL * e;
 }
+
+
+
+void FoEEnergy::AddGradient(double grad[], const unsigned char image[]) const {
+    unsigned char values[4];
+    for (int i = 0; i < 4; ++i)
+        values[i] = image[_neighborhood[i]];
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            double dot = 0.0;
+            for (int k = 0; k < 4; ++k)
+                dot += expert[j][k] * values[k];
+            grad[_neighborhood[i]] += alpha[j] * expert[j][i] * dot / (1 + 0.5 * dot * dot);
+        }
+    }
+}
+
+void FoEUnaryEnergy::AddGradient(double grad[], const unsigned char image[]) const {
+    grad[_neighborhood[0]] += ((double)image[_neighborhood[0]] - (double)_orig) / (sigma * sigma);
+}
+
+void FoE3x3Energy::AddGradient(double grad[], const unsigned char image[]) const {
+    unsigned char values[9];
+    for (int i = 0; i < 9; ++i)
+        values[i] = image[_neighborhood[i]];
+    for (int i = 0; i < 9; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            double dot = 0.0;
+            for (int k = 0; k < 9; ++k)
+                dot += filter9[j][k] * values[k];
+            grad[_neighborhood[i]] += alpha9[j] * filter9[j][i] * dot / (1 + 0.5 * dot * dot);
+        }
+    }
+}
+
+void FoE3x3UnaryEnergy::AddGradient(double grad[], const unsigned char image[]) const {
+    grad[_neighborhood[0]] += ((double)image[_neighborhood[0]] - (double)_orig) / (sigma * sigma);
+}

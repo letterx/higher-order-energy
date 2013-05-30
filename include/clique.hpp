@@ -95,6 +95,7 @@ class CliqueEnergy {
          *          _neighborhood[i]
          */
         virtual R operator()(const T buf[]) const = 0;
+        virtual void AddGradient(double grad[], const T image[]) const { }
 
         int _size;
         int _neighborhood[D];

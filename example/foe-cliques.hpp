@@ -28,6 +28,7 @@ class FoEEnergy : public CliqueEnergy<REAL, unsigned char, 4> {
         FoEEnergy(int size, int nbd[])
             : CliqueEnergy<REAL, unsigned char, 4>(size, nbd) { }
         virtual REAL operator()(const unsigned char buf[]) const;
+        virtual void AddGradient(double grad[], const unsigned char image[]) const;
 };
 
 /*
@@ -42,6 +43,7 @@ class FoEUnaryEnergy : public CliqueEnergy<REAL, unsigned char, 4> {
               _orig(originalImagePixel) { }
 
         virtual REAL operator()(const unsigned char buf[]) const;
+        virtual void AddGradient(double grad[], const unsigned char image[]) const;
         static double sigma;
 
     private:
@@ -54,6 +56,7 @@ class FoE3x3Energy : public CliqueEnergy<REAL, unsigned char, 9> {
         FoE3x3Energy(int size, int nbd[])
             : CliqueEnergy<REAL, unsigned char, 9>(size, nbd) { }
         virtual REAL operator()(const unsigned char buf[]) const;
+        virtual void AddGradient(double grad[], const unsigned char image[]) const;
 
         static void InitFoE3x3();
 };
@@ -65,6 +68,7 @@ class FoE3x3UnaryEnergy : public CliqueEnergy<REAL, unsigned char, 9> {
               _orig(originalImagePixel) { }
 
         virtual REAL operator()(const unsigned char buf[]) const;
+        virtual void AddGradient(double grad[], const unsigned char image[]) const;
         static double sigma;
 
     private:
