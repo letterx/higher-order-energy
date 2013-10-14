@@ -424,7 +424,13 @@ void HigherOrderEnergy<R, D>::_EliminateTerms() {
                     B.insert(t.vars[i]);
                 }
             }
-           
+            
+            // case where they are both in the same pairwise cover
+            if (B.empty()) {
+                continue;
+            }
+
+            // otherwise
             coverIt = _varCoverMap.find(A); 
             if (coverIt != _varCoverMap.end()) {
                 newVars[0] = coverIt->second._id;
