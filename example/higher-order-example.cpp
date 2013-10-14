@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
         Image_uc proposed;
         proposed = GetProposedImage(current, i, blur);
 
-        FusionMove(current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques);
+        FusionMove(current.Width(), current.Height(), current.Data(), proposed.Data(), current.Data(), cliques);
     }
     ImageToFile(current, outfilename);
     REAL energy  = cliques.Energy(current.Data());

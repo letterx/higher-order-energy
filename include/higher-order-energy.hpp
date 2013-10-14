@@ -54,6 +54,8 @@
  */
 
 #include <vector>
+#include <set>
+#include <map>
 #include <list>
 #include <boost/foreach.hpp>
 
@@ -62,6 +64,7 @@ class HigherOrderEnergy {
     public:
         typedef int VarId;
         typedef VarId NodeId;
+        typedef std::set<VarId> VarIdSet_t;
 
         // Constructs empty HigherOrderEnergy with no variables or terms
         HigherOrderEnergy();
@@ -94,6 +97,9 @@ class HigherOrderEnergy {
         // the minimal requirements.
         template <typename QR>
         void ToQuadratic(QR &qr);
+
+        void SetWidth(int n);
+        void SetHeight(int n);
 
         void Clear();
 
@@ -134,15 +140,25 @@ class HigherOrderEnergy {
             std::list<Term> _terms;
             R _coeff;
 
+            int _bkValue;
             void PrintTerms() const;
+        };
+
+        struct CoverRecord {
+            CoverRecord(VarIdSet_t cover, VarId id)
+                : _cover(cover), _id(id), _bkValue(0), _size(cover.size()) { } 
+            VarIdSet_t _cover;
+            VarId _id;
+            int _bkValue;
+            int _size;            
         };
 
         R _constantTerm;
 
         void RemoveTerm(Term* tp);
-        void _EliminatePositiveTerms();
-        template <typename QR>
-        void _ReduceNegativeTerms(QR& qr);
+        void _SetupPairwiseCover();
+        void _CalculateBkValues();
+        void _EliminateTerms();
         void _ReportMultilinearStats();
 
         size_t NumTerms() const {
@@ -153,14 +169,23 @@ class HigherOrderEnergy {
         }
 
         VarId _varCounter;
+        int _width;
+        int _height;
 
         typedef std::vector<VarRecord> varRecordVec_t;
         varRecordVec_t _varRecords;
+        typedef std::list<Term> termList_t;
+        std::map<int, termList_t> _allTerms;
+        typedef std::vector<CoverRecord> coverRecordVec_t;
+        coverRecordVec_t _coverRecords;
+        typedef std::map<VarIdSet_t, CoverRecord> varCoverMap_t;
+        typedef std::pair<VarIdSet_t, CoverRecord> setToId;
+        varCoverMap_t _varCoverMap;
 };
 
 template <typename R, int D>
 inline HigherOrderEnergy<R, D>::HigherOrderEnergy()
-    : _constantTerm(0), _varCounter(0), _varRecords()
+    : _constantTerm(0), _varCounter(0), _varRecords(), _allTerms(), _coverRecords(), _varCoverMap()
 { }
 
 
@@ -182,8 +207,21 @@ HigherOrderEnergy<R, D>::AddVars(int n) {
 }
 
 template <typename R, int D>
+inline void
+HigherOrderEnergy<R, D>::SetWidth(int n) {
+    _width = n;
+}
+
+template <typename R, int D>
+inline void
+HigherOrderEnergy<R, D>::SetHeight(int n) {
+    _height = n;
+}
+
+template <typename R, int D>
 inline void 
 HigherOrderEnergy<R, D>::AddTerm(R coeff, int d, const VarId vars[]) {
+// TODO(irwinherrmann): simplify?
     if(coeff == 0) {
         return;
     } else if (d == 0) {
@@ -191,11 +229,11 @@ HigherOrderEnergy<R, D>::AddTerm(R coeff, int d, const VarId vars[]) {
         return;
     } else if (d == 1) {
         _varRecords[vars[0]]._coeff += coeff;
-        return;
     } else {
         VarRecord& smallestVarRec = _varRecords[vars[0]];
         typename std::list<Term>::iterator it = smallestVarRec._terms.begin();
         int compareVars = 1;
+        // TODO(irwinherrmann) - abstract this out
         while (it != smallestVarRec._terms.end()) {
             compareVars = Compare(d, vars, it->degree, it->vars); 
             if (compareVars == 0) {
@@ -219,8 +257,11 @@ HigherOrderEnergy<R, D>::AddTerm(R coeff, int d, const VarId vars[]) {
         }
         if (coeff > 0)
             smallestVarRec._positiveTerms++;
-        return;
     }
+
+    _allTerms[d].push_back(Term(coeff, d, vars));
+
+    return;
 }
 
 template <typename R, int D>
@@ -275,91 +316,156 @@ inline void HigherOrderEnergy<R, D>::AddUnaryTerm(VarId var, R coeff) {
     _varRecords[var]._coeff += coeff;
 }
 
+
+template<typename R, int D>
+void HigherOrderEnergy<R, D>::_SetupPairwiseCover() {
+    // TODO(irwinherrmann) more abstracted in the future. also consider 3x3 case.
+    // 2x1 vertical block
+    for (int varIndex = 0; varIndex < _width * (_height - 1); ++varIndex) {
+        VarId newVar = AddVar();
+        VarIdSet_t set;
+        VarRecord& vr = _varRecords[varIndex];
+        set.insert(vr._id);
+        set.insert(vr._id + _width);
+        CoverRecord cr(set, newVar); 
+        _varCoverMap.insert(setToId(set, cr));
+    }
+
+    // 1x1 unary block
+    for (int varIndex = 0; varIndex < _width * _height; ++varIndex) {
+        VarIdSet_t set;
+        VarRecord& vr = _varRecords[varIndex];
+        set.insert(vr._id);
+        CoverRecord cr(set, vr._id);
+        _varCoverMap.insert(setToId(set, cr));
+    }
+}
+
 template <typename R, int D>
-void HigherOrderEnergy<R, D>::_EliminatePositiveTerms() {
-    size_t numVars = _varRecords.size();
-    for (size_t varIndex = 0; varIndex < numVars; ++varIndex) {
-        R positiveSum = 0;
+void HigherOrderEnergy<R, D>::_CalculateBkValues() {
+    // TODO(irwinherrmann) more abstracted
+    int highestDegree = 4;
+    while (_allTerms.find(highestDegree) != _allTerms.end()) {
+        typename std::list<Term> terms = _allTerms[highestDegree];
+        typename std::list<Term>::iterator termIt = terms.begin();
+        while (termIt != terms.end()) {
+            Term& t = *termIt;
+            VarIdSet_t A;
+            VarIdSet_t B;
+            A.insert(t.vars[0]);
+            for (int i = 1; i < t.degree; ++i) {
+                if ((t.vars[0] - t.vars[i]) % _width == 0) {
+                    A.insert(t.vars[i]);
+                } else {
+                    B.insert(t.vars[i]);
+                }
+            }
+            
+            typename varCoverMap_t::iterator coverIt = _varCoverMap.find(A);
+            if (coverIt != _varCoverMap.end()) {
+                coverIt->second._bkValue += 2 * std::abs(t.coeff);
+            } else {
+                exit(1); // Error
+            }
+
+            coverIt = _varCoverMap.find(B);
+            if (coverIt != _varCoverMap.end()) {
+                coverIt->second._bkValue += 2 * std::abs(t.coeff);
+            } else {
+                exit(1); // Error
+            }
+
+            ++termIt;
+        }
+    }
+
+}
+
+// specifically written for 2x2 clique size
+template <typename R, int D>
+void HigherOrderEnergy<R, D>::_EliminateTerms() {
+    size_t numPixels = _width * _height;
+    // all H in curlyH
+    for (size_t varIndex = 0; varIndex < numPixels; ++varIndex) {
         VarId newPosVar = AddVar();
 
         VarRecord& vr = _varRecords[varIndex];
 
         typename std::list<Term>::iterator termIt = vr._terms.begin();
-        VarId newVars[D];
         while (termIt != vr._terms.end()) {
             Term& t = *termIt;
-            //std::cout << "\t" << t.ToString() << std::endl;
             typename std::list<Term>::iterator currIt = termIt;
             ++termIt;
+            VarIdSet_t s;
+            for (int i = 0; i < t.degree; ++i) {
+                s.insert(t.vars[i]);
+            }
+            int bk = 0;
+            typename varCoverMap_t::iterator coverIt = _varCoverMap.find(s);
+            if (coverIt != _varCoverMap.end()) {
+                bk = coverIt->second._bkValue;
+            }
+            int newCoeff = t.coeff + .5*bk;
 
-            if (t.coeff > 0) {
-                positiveSum += t.coeff;
-                for (int i = 0; i < t.degree - 1; ++i) {
-                    newVars[i] = t.vars[i+1];
-                    assert(newVars[i] >= vr._id);
-                }
-                AddTerm(t.coeff, t.degree - 1, newVars);
-                newVars[t.degree - 1] = newPosVar;
-                AddTerm(-t.coeff, t.degree, newVars);
-                if (t.degree == 2) {
-                    vr._quadraticTerms--;
+            VarId newVars[2];
+            // TODO(irwinherrmann) - abstract out
+            VarIdSet_t A;
+            VarIdSet_t B;
+            A.insert(t.vars[0]);
+            for (int i = 1; i < t.degree; ++i) {
+                if ((t.vars[0] - t.vars[i]) % _width == 0) {
+                    A.insert(t.vars[i]);
                 } else {
-                    vr._higherOrderTerms--;
-                    vr._sumDegrees -= t.degree;
+                    B.insert(t.vars[i]);
                 }
-                vr._terms.erase(currIt);
             }
-        }
-        VarId quadratic[2];
-        quadratic[0] = vr._id;
-        quadratic[1] = newPosVar;
-        AddTerm(positiveSum, 2, quadratic);
-    }
-}
-
-template <typename R, int D>
-template <typename QR>
-void HigherOrderEnergy<R, D>::_ReduceNegativeTerms(QR& qr) {
-    // Estimate expected size of quadratic problem. Only nodes/edges are
-    // created below, so we can count them ahead of time
-    int expectedVars = _varCounter;
-    int expectedEdges = 0;
-    BOOST_FOREACH(const VarRecord& vr, _varRecords) {
-        expectedVars += vr._higherOrderTerms;
-        expectedEdges += vr._quadraticTerms;
-        expectedEdges += vr._sumDegrees;
-    }
-
-    //std::cout << "\tExpected Vars: " << expectedVars << "\tExpected Edges: " << expectedEdges << std::endl;
-
-    qr.SetMaxEdgeNum(expectedEdges);
-    qr.AddNode(_varCounter);
-
-    // Term-by-term reduction from Friedman & Drineas
-    BOOST_FOREACH(VarRecord& vr, _varRecords) {
-        BOOST_FOREACH(Term& t, vr._terms) {
-            if (t.degree == 2) {
-                qr.AddPairwiseTerm(t.vars[0], t.vars[1], 0, 0, 0, t.coeff);
+           
+            coverIt = _varCoverMap.find(A); 
+            if (coverIt != _varCoverMap.end()) {
+                newVars[0] = coverIt->second._id;
             } else {
-                typename QR::NodeId w = qr.AddNode();
-                assert(t.coeff <= 0);
-                for (int i = 0; i < t.degree; ++i) {
-                    qr.AddPairwiseTerm(t.vars[i], w, 0, 0, 0, t.coeff);
-                }
-                qr.AddUnaryTerm(w, 0, t.coeff*(1-t.degree));
+                exit(1); // Error
             }
+            coverIt = _varCoverMap.find(B);
+            if (coverIt != _varCoverMap.end()) {
+                newVars[1] = coverIt->second._id;
+            } else {
+                exit(1); // Error
+            }
+
+            AddTerm(newCoeff, 2, newVars);
+            vr._terms.erase(currIt);
         }
     }
-    BOOST_FOREACH(VarRecord& vr, _varRecords) {
-        qr.AddUnaryTerm(vr._id, 0, vr._coeff);
+
+    
+    typename varCoverMap_t::iterator coverIt = _varCoverMap.begin();
+    while (coverIt != _varCoverMap.end()) {
+        CoverRecord coverRec = coverIt -> second;
+        int newCoeff = -coverRec._bkValue * (coverRec._cover.size() - .5);
+        // TODO(irwinherrmann) - ensure that varId is index - right now that's true
+        _varRecords[coverRec._id]._coeff = newCoeff;
+
+        typename VarIdSet_t::iterator coverElemsIt = coverRec._cover.begin();
+        while (coverElemsIt != coverRec._cover.end()) {
+            VarId var = *coverElemsIt;
+            VarId newVars[2];
+            newVars[0] = var;
+            newVars[1] = coverRec._id;
+            AddTerm(newCoeff, 2, newVars);
+            ++coverElemsIt;
+        }
+
+        ++coverIt;
     }
 }
 
 template <typename R, int D>
 template <typename QR>
 inline void HigherOrderEnergy<R, D>::ToQuadratic(QR& qr) {
-    _EliminatePositiveTerms();
-    _ReduceNegativeTerms(qr);
+    _SetupPairwiseCover();
+    _CalculateBkValues();
+    _EliminateTerms();
 }
 
 template <typename R, int D>

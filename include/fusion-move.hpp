@@ -37,6 +37,7 @@
  *                              functions
  *
  * Parameters:
+ *  TODO(irwinherrmann): change this
  *  size            The number of variables (pixels) in the image
  *  current         The current image
  *  proposed        The proposed image to fuse with
@@ -54,7 +55,8 @@ template <typename RandomAccessIterator,
          typename Label, 
          int D, 
          typename QuadraticRep>
-void FusionMove(size_t size, 
+void FusionMove(size_t width,
+        size_t height, 
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
@@ -94,7 +96,8 @@ template <typename RandomAccessIterator,
          typename Energy, 
          typename Label, 
          int D>
-void SetupFusionEnergy(size_t size,
+void SetupFusionEnergy(size_t width,
+        size_t height,
         RandomAccessIterator current,
         RandomAccessIterator proposed,
         const CliqueSystem<Energy, Label, D>& cliqueSystem,
@@ -123,7 +126,8 @@ template <typename RandomAccessIterator,
     typename Label, 
     int D, 
     typename QuadraticRep>
-void FusionMove(size_t size, 
+void FusionMove(size_t width,
+        size_t height, 
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
@@ -131,10 +135,10 @@ void FusionMove(size_t size,
         QuadraticRep& qr) 
 {
     HigherOrderEnergy<Energy, D> hoe;
-    SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
+    SetupFusionEnergy(width, height, current, proposed, cliqueSystem, hoe);
     hoe.ToQuadratic(qr);
     qr.Solve();
-    GetFusedImage(size, current, proposed, out, qr);
+    GetFusedImage(width * height, current, proposed, out, qr);
 }
 
 
@@ -143,14 +147,16 @@ template <typename RandomAccessIterator,
     typename Energy, 
     typename Label, 
     int D>
-void FusionMove(size_t size, 
+void FusionMove(size_t width,
+        size_t height, 
         RandomAccessIterator current, 
         RandomAccessIterator proposed, 
         RandomAccessIterator out, 
         const CliqueSystem<Energy, Label, D>& cliqueSystem)
 {
+    size_t size = width * height;
     QPBO<Energy> qr(size, 0);
-    FusionMove(size, current, proposed, out, cliqueSystem, qr);
+    FusionMove(width, height, current, proposed, out, cliqueSystem, qr);
 }
 #endif
 
@@ -158,13 +164,17 @@ template <typename RandomAccessIterator,
     typename Energy, 
     typename Label, 
     int D>
-void SetupFusionEnergy(size_t size,
+void SetupFusionEnergy(size_t width,
+        size_t height,
         RandomAccessIterator current,
         RandomAccessIterator proposed,
         const CliqueSystem<Energy, Label, D>& cliqueSystem,
         HigherOrderEnergy<Energy, D>& hoe)
 {
+    size_t size = width * height;
     hoe.AddVars(size);
+    hoe.SetWidth(width);
+    hoe.SetHeight(height);
     typedef typename CliqueSystem<Energy, Label, D>::CliquePointer 
         CliquePointer;
     BOOST_FOREACH(const CliquePointer& cp, cliqueSystem.GetCliques()) {
