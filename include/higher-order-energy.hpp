@@ -339,6 +339,8 @@ void HigherOrderEnergy<R, D>::_SetupPairwiseCover() {
         CoverRecord cr(set, vr._id);
         _varCoverMap.insert(setToId(set, cr));
     }
+
+    std::cout<<"setup covers"<<std::endl;
 }
 
 template <typename R, int D>
@@ -377,8 +379,9 @@ void HigherOrderEnergy<R, D>::_CalculateBkValues() {
 
             ++termIt;
         }
+        --highestDegree;
     }
-
+    std::cout<<"after calculate bk"<<std::endl;
 }
 
 // specifically written for 2x2 clique size
@@ -390,7 +393,7 @@ void HigherOrderEnergy<R, D>::_EliminateTerms() {
         VarId newPosVar = AddVar();
 
         VarRecord& vr = _varRecords[varIndex];
-
+        std::cout << "varIndex " << varIndex << std::endl;
         typename std::list<Term>::iterator termIt = vr._terms.begin();
         while (termIt != vr._terms.end()) {
             Term& t = *termIt;
@@ -438,7 +441,7 @@ void HigherOrderEnergy<R, D>::_EliminateTerms() {
         }
     }
 
-    
+    std::cout<<"after all H"<<std::endl;
     typename varCoverMap_t::iterator coverIt = _varCoverMap.begin();
     while (coverIt != _varCoverMap.end()) {
         CoverRecord coverRec = coverIt -> second;
@@ -458,6 +461,7 @@ void HigherOrderEnergy<R, D>::_EliminateTerms() {
 
         ++coverIt;
     }
+    std::cout<<"after all K"<<std::endl;
 }
 
 template <typename R, int D>
