@@ -362,7 +362,7 @@ void HigherOrderEnergy<R, D>::_CalculateBkValues() {
                     B.insert(t.vars[i]);
                 }
             }
-            
+           
             typename varCoverMap_t::iterator coverIt = _varCoverMap.find(A);
             if (coverIt != _varCoverMap.end()) {
                 coverIt->second._bkValue += 2 * std::abs(t.coeff);
@@ -370,11 +370,13 @@ void HigherOrderEnergy<R, D>::_CalculateBkValues() {
                 exit(1); // Error
             }
 
-            coverIt = _varCoverMap.find(B);
-            if (coverIt != _varCoverMap.end()) {
-                coverIt->second._bkValue += 2 * std::abs(t.coeff);
-            } else {
-                exit(1); // Error
+            if (!B.empty()) {
+                coverIt = _varCoverMap.find(B);
+                if (coverIt != _varCoverMap.end()) {
+                    coverIt->second._bkValue += 2 * std::abs(t.coeff);
+                } else {
+                    exit(1); // Error
+                }
             }
 
             ++termIt;
