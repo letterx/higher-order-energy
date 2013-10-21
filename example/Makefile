@@ -1,15 +1,16 @@
 HIGHER_ORDER_DIR = ../include
+FUSION_DIR = ../fusion-move
 QPBO_DIR = ../qpbo
 
 CXX ?= g++
 DEFS =
-INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR)
-CXX_FLAGS = -O3 -Wall $(INCLUDES) $(DEFS)
+OPT ?= -O3
+INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR) -I$(FUSION_DIR)
+CXX_FLAGS = --std=c++11 $(OPT) -Wall $(INCLUDES) $(DEFS)
 LD_FLAGS = 
-LIBS = 
+LIBS = -lopencv_core -lopencv_imgproc -lopencv_highgui
 
 EXAMPLE_SRCS = higher-order-example.cpp \
-			   image.cpp \
 			   foe-cliques.cpp
 EXAMPLE_OBJS = $(EXAMPLE_SRCS:.cpp=.o)
 
