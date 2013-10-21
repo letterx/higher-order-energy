@@ -4,7 +4,7 @@ QPBO_DIR = ../qpbo
 CXX ?= g++
 DEFS =
 INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR)
-CXX_FLAGS = -O3 -Wall $(INCLUDES) $(DEFS)
+CXX_FLAGS = -std=c++11 -O3 -Wall $(INCLUDES) $(DEFS)
 LD_FLAGS = 
 LIBS = 
 
@@ -29,7 +29,7 @@ $(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS)
 
 .PHONY: test
 test: $(TARGET)
-	./$(TARGET) medium-test.pgm medium-out.pgm
+	./$(TARGET) medium-out.pgm medium-test.pgm
 
 .PHONY: clean
 clean: 

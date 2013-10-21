@@ -155,7 +155,7 @@ void FusionMove(size_t width,
         const CliqueSystem<Energy, Label, D>& cliqueSystem)
 {
     size_t size = width * height;
-    QPBO<Energy> qr(size, 0);
+    QPBO<Energy> qr(4*size, 0);
     FusionMove(width, height, current, proposed, out, cliqueSystem, qr);
 }
 #endif
@@ -180,7 +180,6 @@ void SetupFusionEnergy(size_t width,
     BOOST_FOREACH(const CliquePointer& cp, cliqueSystem.GetCliques()) {
         const CliqueEnergy<Energy, Label, D>& c = *cp;
         unsigned int size = c._size;
-
         if (size == 0) {
             continue;
         } else if (size == 1) {

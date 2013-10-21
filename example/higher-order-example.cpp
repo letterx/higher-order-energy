@@ -39,7 +39,6 @@ int main(int argc, char **argv) {
 
     // Initialize the gaussian kernel for blurring the image
     InitGaussKernel(sigma, kernelRadius, gaussianKernel);
-
     char *infilename = argv[1];
     char *outfilename = argv[2];
 
@@ -58,8 +57,6 @@ int main(int argc, char **argv) {
     int iterations = 300;
 
     for (int i = 0; i < iterations; ++i) {
-        std::cout << "Iteration " << i+1 << std::endl;
-
         REAL energy  = cliques.Energy(current.Data()); 
         // check if we've reached convergence
         if (i > thresholdIters 

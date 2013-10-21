@@ -111,6 +111,7 @@
 
 #include <string.h>
 #include "block.h"
+#include <iostream>
 
 // NOTE: in UNIX, use -DNDEBUG flag to suppress assertions!!!
 #include <assert.h>
