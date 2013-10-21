@@ -19,3 +19,6 @@
 
 # Compiled binaries
 higher-order-example
+
+# Image files
+*.pgm
