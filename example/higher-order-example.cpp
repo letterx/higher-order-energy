@@ -108,16 +108,16 @@ void FusionProposal(int niter, const std::vector<Label>& current, std::vector<La
     if (niter % 2 == 0) {
         // On even iterations, proposal is a gaussian-blurred version of the 
         // current image, plus a small amount of gaussian noise
-        cv::Mat image(height, width, CV_32SC1);
+        cv::Mat image(height, width, CV_32FC1);
         for (int i = 0; i < height*width; ++i)
             image.data[i] = current[i];
-        cv::Mat blur;
+        cv::Mat blur(height, width, CV_32FC1);
         cv::Size ksize(0,0);
-        cv::GaussianBlur(image, blur, ksize, sigma, sigma, cv::BORDER_REPLICATE);
+        cv::GaussianBlur(image, blur, ksize, 3.0, 3.0, cv::BORDER_REPLICATE);
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
                 int n = i*width+j;
-                int p = blur.data[n] + (int)noise3sigma();
+                int p = blur.data[n] + noise3sigma();
                 if (p > 255) p = 255;
                 if (p < 0) p = 0;
                 proposed[n] = (Label)p;
@@ -135,6 +135,7 @@ void FusionProposal(int niter, const std::vector<Label>& current, std::vector<La
 
 MultilabelEnergy SetupEnergy(const std::vector<Label>& image) {
     MultilabelEnergy energy(256);
+    energy.AddNode(width*height);
     
     // For each 2x2 patch, add in a Field of Experts clique
     for (int i = 0; i < height - 1; ++i) {
