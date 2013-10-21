@@ -56,6 +56,7 @@
 #include <vector>
 #include <list>
 #include <boost/foreach.hpp>
+#include <algorithm>
 
 template <typename R, int D>
 class HigherOrderEnergy {
