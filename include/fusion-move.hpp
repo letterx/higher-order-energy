@@ -147,6 +147,13 @@ void FusionMove(FusionStats& stats,
         qr.Solve();
         qr.ComputeWeakPersistencies();
         GetFusedImage(stats, size, current, proposed, out, qr);
+    } else if (optType == OptType::PC) {
+        PairwiseCover<Energy, D> hoe;
+        SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
+        hoe.ToQuadratic(qr);
+        qr.Solve();
+        qr.ComputeWeakPersistencies();
+        GetFusedImage(stats, size, current, proposed, out, qr);
     } else if (optType == OptType::HOCR) {
         PBF<Energy, D> pbf;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, pbf);

@@ -91,6 +91,8 @@ int main(int argc, char **argv) {
                     methods.push_back(OptType::GRD_Heur);
                 } else if (m == std::string("fix")) {
                     methods.push_back(OptType::Fix);
+                } else if (m == std::string("pc")) {
+                    methods.push_back(OptType::PC);
                 } else {
                     std::cout << "Unrecognized method type: " << m << "\n";
                     exit(-1);

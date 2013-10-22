@@ -37,6 +37,8 @@ foe-9: foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
 %.o: %.cpp
 	$(CXX) $(CXX_FLAGS) -o $@ -c $<
 
+higher-order-example.o: ../include/pairwise-cover.hpp
+
 $(LIBPETTER): $(QPBO_OBJS)
 	cd ../grd; make
 

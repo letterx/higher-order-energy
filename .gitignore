@@ -20,3 +20,8 @@
 # Compiled binaries
 higher-order-example
 grd/bin
+foe-9
+
+# Experiment files
+*.pgm
+*.stats

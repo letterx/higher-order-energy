@@ -2,6 +2,7 @@
 #define _GENERIC_HIGHER_ORDER_HPP_
 
 #include "higher-order-energy.hpp"
+#include "pairwise-cover.hpp"
 #include "HOCR.h"
 #include "PseudoBoolean.h"
 #include <string>
@@ -10,7 +11,8 @@ enum class OptType {
     Fix,
     HOCR,
     GRD,
-    GRD_Heur
+    GRD_Heur,
+    PC
 };
 
 inline std::string ToString(OptType ot) {
@@ -19,6 +21,7 @@ inline std::string ToString(OptType ot) {
         case OptType::HOCR: return "hocr";
         case OptType::GRD: return "grd";
         case OptType::GRD_Heur: return "grd-heur";
+        case OptType::PC: return "pc";
         default: return "unknown";
     }
 }
