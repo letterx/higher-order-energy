@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
             }
             // Do some statistic gathering
             energies[i%thresholdIters] = energy;
-            std::cout << "Current Energy: " << (double)energy / DoubleToREAL << std::endl;
+            std::cout << "Current Energy: " << energy << "\n";
 
             // Real work here: get proposed image, then fuse it with current image
             Image_uc proposed;

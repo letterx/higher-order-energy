@@ -43,6 +43,16 @@ void AddVars(Petter::PseudoBoolean<REAL>& opt, size_t numVars) {
 
 
 template <typename Optimizer, typename Energy>
+void AddConstantTerm(Optimizer& opt, Energy r) {
+    // noop
+}
+
+template <typename REAL, int D>
+void AddConstantTerm(PairwiseCover<REAL, D>& opt, REAL coeff){
+    opt.AddConstantTerm(coeff);
+}
+
+template <typename Optimizer, typename Energy>
 void AddUnaryTerm(Optimizer& opt, int v, Energy coeff) {
     opt.AddUnaryTerm(v, coeff);
 }

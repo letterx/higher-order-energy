@@ -21,6 +21,7 @@
 higher-order-example
 grd/bin
 foe-9
+test-pairwise
 
 # Experiment files
 *.pgm

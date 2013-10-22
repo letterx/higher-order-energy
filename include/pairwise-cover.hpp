@@ -5,6 +5,7 @@
 #include <vector>
 #include <list>
 #include <boost/foreach.hpp>
+#include <cassert>
 
 template <typename R, int D>
 class PairwiseCover {
@@ -26,6 +27,7 @@ class PairwiseCover {
         // where k is the size of the clique.
         void AddClique(const std::vector<VarId>& vars, const std::vector<R>& energy);
 
+        void AddConstantTerm(R coeff) { _constantTerm += coeff; }
         void AddUnaryTerm(VarId v, R coeff);
         void AddUnaryTerm(VarId v, R E0, R E1) { AddUnaryTerm(v, E1 - E0); } 
     
@@ -44,17 +46,17 @@ class PairwiseCover {
         struct Clique {
             int size;
             VarId vars[D];
-            std::vector<REAL> subset_coeffs;
+            std::vector<R> subset_coeffs;
             int a_size;
-            std::vector<REAL> a_coeffs;
-            std::vector<REAL> b_coeffs;
+            std::vector<R> a_coeffs;
+            std::vector<R> b_coeffs;
         };
 
         void ComputeBeta();
 
         R _constantTerm;
         VarId _varCounter;
-        std::vector<REAL> _unaryTerms;
+        std::vector<R> _unaryTerms;
         std::vector<Clique> _cliques;
 };
 
@@ -80,6 +82,31 @@ PairwiseCover<R, D>::AddVars(int n) {
     return firstVar;
 }
 
+/*
+template <typename R, int D>
+template <typename QR>
+R PairwiseCover<R, D>::ComputeEnergy(QR& qr) {
+    R energy = _constantTerm;
+    for (NodeId i = 0; i < _varCounter; ++i) {
+        if (qr.GetLabel(i) == 1)
+            energy += _unaryTerms[i];
+    }
+    for (const Clique& c : _cliques) {
+        Assgn max_subset = (1 << c.size);
+        for (Assgn subset = 0; subset < max_subset; ++subset) {
+            bool all_set = true;
+            for (int i = 0; i < c.size; ++i) {
+                if ((subset & (1 << i)) && (qr.GetLabel(c.vars[i]) != 1))
+                    all_set = false;
+            }
+            if (all_set)
+                energy += c.subset_coeffs[subset];
+        }
+    }
+    return energy;
+}
+*/
+
 template <typename R, int D>
 inline void PairwiseCover<R, D>::AddClique(const std::vector<VarId>& vars,
         const std::vector<R>& energyTable) {
@@ -92,11 +119,11 @@ inline void PairwiseCover<R, D>::AddClique(const std::vector<VarId>& vars,
     Clique& c = _cliques.back();
     c.size = size;
     for (size_t i = 0; i < size; ++i)
-        c.vars[i] = vars[i];
-    c.subset_coeffs = std::vector<REAL>(numAssignments, 0);
+        c.vars[i] = vars[c.size - i - 1];
+    c.subset_coeffs = std::vector<R>(numAssignments, 0);
     c.a_size = (size+1)/2;
-    c.a_coeffs = std::vector<REAL>(1 << c.a_size, 0);
-    c.b_coeffs = std::vector<REAL>(1 << (size - c.a_size), 0);
+    c.a_coeffs = std::vector<R>(1 << c.a_size, 0);
+    c.b_coeffs = std::vector<R>(1 << (size - c.a_size), 0);
 
     // For each boolean assignment, add that to the corresponding monomials
     // with the correct parity
@@ -105,7 +132,7 @@ inline void PairwiseCover<R, D>::AddClique(const std::vector<VarId>& vars,
             ++assignment) 
     {
         const R energy = energyTable[assignment];
-        for (unsigned int subset = 1; 
+        for (unsigned int subset = 0; 
                 subset < numAssignments; 
                 ++subset) 
         {
@@ -137,6 +164,9 @@ inline void PairwiseCover<R, D>::ComputeBeta() {
         for (Assgn term = everything; term > 0; --term) {
             Assgn term_a = term & a_vars;
             Assgn term_b = term & b_vars;
+            assert(term_a <= a_vars);
+            assert(term_b <= b_vars);
+            assert((term_a | term_b) == term);
             if (term_a == 0) {
                 // Then term is subset of B, hence is in pairwise cover
                 // Split it into a singleton and rest of term, singleton
@@ -183,7 +213,6 @@ inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
         Assgn everything = (1 << c.size) - 1;
         Assgn a_vars = (1 << c.a_size) - 1;
         Assgn b_vars = everything & ~a_vars;
-        _constantTerm += c.subset_coeffs[0];
         for (Assgn term = 1; term <= everything; ++term) {
             Assgn term_a = term & a_vars;
             Assgn term_b = term & b_vars;
@@ -198,8 +227,8 @@ inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
                     assert(term == Assgn(1 << bit_set));
                     qr.AddUnaryTerm(c.vars[bit_set], 0, 2*c.subset_coeffs[term]);
                 } else {
-                    REAL beta_H = c.b_coeffs[term >> c.a_size];
-                    REAL alpha_H = c.subset_coeffs[term];
+                    R beta_H = c.b_coeffs[term >> c.a_size];
+                    R alpha_H = c.subset_coeffs[term];
                     term_a = term & ~term_b;
                     assert(term_a != 0);
                     assert(term_b < b_vars && term_a < b_vars);
@@ -231,8 +260,8 @@ inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
                     assert(term == Assgn(1 << bit_set));
                     qr.AddUnaryTerm(c.vars[bit_set], 0, 2*c.subset_coeffs[term]);
                 } else {
-                    REAL beta_H = c.a_coeffs[term];
-                    REAL alpha_H = c.subset_coeffs[term];
+                    R beta_H = c.a_coeffs[term];
+                    R alpha_H = c.subset_coeffs[term];
                     term_b = term & ~term_a;
                     assert(term_a != 0);
                     assert(term_b < a_vars && term_a < a_vars);
@@ -254,7 +283,7 @@ inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
                     }
                 }
             } else {
-                REAL alpha_H = c.subset_coeffs[term];
+                R alpha_H = c.subset_coeffs[term];
                 NodeId a_node = a_nodes + term_a;
                 if (__builtin_popcount(term_a) == 1) // It's a singelton, identify with original var
                     a_node = c.vars[__builtin_ctz(term_a)];
@@ -265,6 +294,80 @@ inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
             }
         }
     }
+
+    //std::cout << "Constant term: " << _constantTerm << "\n";
+    //std::cout << "Before Energy: " << ComputeEnergy(qr) << "\n";
+    //std::cout << "Before Energy: " << ComputeEnergy2(qr) << "\n";
+    //std::cout << "QPBO Energy:   " << qr.ComputeTwiceEnergy() << "\n";
+    qr.Solve();
+
+    /*
+    int one_labels = 0;
+    int aux_labels = 0;
+    NodeId node_base = _varCounter;
+    for (const Clique& c : _cliques) {
+        NodeId a_nodes = node_base;
+        node_base += c.a_coeffs.size();
+        NodeId b_nodes = node_base;
+        node_base += c.b_coeffs.size();
+        Assgn everything = (1 << c.size) - 1;
+        Assgn a_vars = (1 << c.a_size) - 1;
+        Assgn b_vars = everything & ~a_vars;
+        for (Assgn a = 0; a <= a_vars; ++a) {
+            if (__builtin_popcount(a) > 1) {
+                int label = qr.GetLabel(a_nodes + a);
+                if (label >= 0) aux_labels++;
+                if (label == 1) {
+                    one_labels++;
+                    for (int i = 0; i < c.size; ++i) {
+                        if (a & (1 << i)) {
+                            assert(qr.GetLabel(c.vars[i]) != 0);
+                            qr.SetLabel(c.vars[i], 1);
+                            assert(qr.GetLabel(c.vars[i]) == 1);
+                        }
+                    }
+                } else {
+                    bool sublabeled = true;
+                    for (int i = 0; i < c.size; ++i) {
+                        if ((a & (1 << i)) && (qr.GetLabel(a_nodes+a) < 1))
+                            sublabeled = false;
+                    }
+                    assert(!sublabeled);
+                }
+            }
+        }
+        for (Assgn b = 0; b <= (b_vars >> c.a_size); ++b) {
+            Assgn shifted_b = b << c.a_size;
+            if (__builtin_popcount(shifted_b) > 1) {
+                int label = qr.GetLabel(b_nodes + b);
+                if (label >= 0) aux_labels++;
+                if (label == 1) {
+                    one_labels++;
+                    for (int i = 0; i < c.size; ++i) {
+                        if (shifted_b & (1 << i)) {
+                            assert(qr.GetLabel(c.vars[i]) != 0);
+                            qr.SetLabel(c.vars[i], 1);
+                            assert(qr.GetLabel(c.vars[i]) == 1);
+                        }
+                    }
+                } else {
+                    bool sublabeled = true;
+                    for (int i = 0; i < c.size; ++i) {
+                        if ((shifted_b & (1 << i)) && (qr.GetLabel(b_nodes+b) < 1))
+                            sublabeled = false;
+                    }
+                    assert(!sublabeled);
+                }
+            }
+        }
+    }
+    */
+    //std::cout << "Auxilliary labels: " << aux_labels << "\n";
+    //std::cout << "Auxilliary swaps: " << one_labels << "\n";
+    qr.ComputeWeakPersistencies();
+    //std::cout << "After Energy:  " << ComputeEnergy(qr) << "\n";
+    //std::cout << "After Energy:  " << ComputeEnergy2(qr) << "\n";
+    //std::cout << "QPBO Energy:   " << qr.ComputeTwiceEnergy(1) << "\n";
 }
 
 

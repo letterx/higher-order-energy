@@ -151,8 +151,8 @@ void FusionMove(FusionStats& stats,
         PairwiseCover<Energy, D> hoe;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
         hoe.ToQuadratic(qr);
-        qr.Solve();
-        qr.ComputeWeakPersistencies();
+        //qr.Solve();
+        //qr.ComputeWeakPersistencies();
         GetFusedImage(stats, size, current, proposed, out, qr);
     } else if (optType == OptType::HOCR) {
         PBF<Energy, D> pbf;
@@ -254,6 +254,7 @@ void SetupFusionEnergy(size_t size,
             Energy e0 = c(&current[c._neighborhood[0]]);
             Energy e1 = c(&proposed[c._neighborhood[0]]);
             AddUnaryTerm(opt, c._neighborhood[0], e1 - e0);
+            AddConstantTerm(opt, e0);
         } else {
             unsigned int numAssignments = 1 << size;
             Energy coeffs[numAssignments];
@@ -302,6 +303,7 @@ void GetFusedImage(FusionStats& stats,
             out[i] = current[i];
         }
     }
+    //std::cout << "Labeled: " << stats.labeled << "\tSwaps: " << stats.swaps << "\n";
 }
 
 #endif
