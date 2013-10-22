@@ -50,6 +50,9 @@ class PairwiseCover {
             R b_coeffs[1 << (D/2)];
         };
 
+        VarId NumNodes() const { return _varCounter; }
+        size_t NumCliques() const { return _cliques.size(); }
+
     private:
         typedef uint32_t Assgn;
         R _constantTerm;
@@ -66,6 +69,26 @@ void CliqueToQuadratic(const PairwiseCover<R, D>& pc, const typename PairwiseCov
 
 template <typename R, typename QR>
 void CliqueToQuadratic(const PairwiseCover<R, 4>& pc, const typename PairwiseCover<R, 4>::Clique& c, QR& qr);
+
+template <typename R, int D>
+int NumQRNodes(const PairwiseCover<R, D>& pc) {
+    return pc.NumNodes() + 2*(1 << (D/2))*pc.NumCliques();
+}
+
+template <typename R>
+int NumQRNodes(const PairwiseCover<R, 4>& pc) {
+    return pc.NumNodes() + 2*pc.NumCliques();
+}
+
+template <typename R, int D>
+int NumQREdges(const PairwiseCover<R, D>& pc) {
+    return (1 << D)*pc.NumCliques();
+}
+
+template <typename R>
+int NumQREdges(const PairwiseCover<R, 4>& pc) {
+    return 15*pc.NumCliques();
+}
 
 template <typename R, int D>
 inline PairwiseCover<R, D>::PairwiseCover()
@@ -207,10 +230,9 @@ inline void ComputeBeta(Clique& c) {
 
 template <typename R, int D, typename QR>
 void CliqueToQuadratic(const PairwiseCover<R, D>& pc, const typename PairwiseCover<R, D>::Clique& c, QR& qr) {
+    // Exact nodes and cliques worked out by hand for size 4 clique
+
     typedef uint32_t Assgn;
-    // TODO(afix): note, there's some waste here, since we
-    // don't actually need nodes for the singeltons / empty
-    // subsets. Shouldn't really affect things too much
     auto a_nodes = qr.AddNode(1 << c.a_size);
     auto b_nodes = qr.AddNode(1 << (c.size - c.a_size));
     Assgn everything = (1 << c.size) - 1;
@@ -339,7 +361,9 @@ template <typename R, int D>
 template <typename QR>
 inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
     typedef typename QR::NodeId NodeId;
+
     qr.AddNode(_varCounter);
+    qr.SetMaxEdgeNum(NumQREdges(*this));
     // REMEMBER: SCALE ALL COSTS BY 2 WHEN ADDING TO QR
     for (NodeId i = 0; i < _varCounter; ++i)
         qr.AddUnaryTerm(i, 0, 2*_unaryTerms[i]);
