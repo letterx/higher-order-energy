@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
         ("grad,g", po::value<bool>(&grad_descent)->default_value(false), "Flag for using gradient descent proposals")
         ("eta", po::value<double>(&eta)->default_value(60.0), "Scale for gradient descent proposals")
         ("thresh", po::value<double>(&threshold)->default_value(100.0), "Threshold to stop optimization")
-        ("sigma", po::value<double>(&sigma)->default_value(20.0), "Sigma value for unaries")
+        ("sigma", po::value<double>(&FoEUnaryEnergy::sigma)->default_value(20.0), "Sigma value for unaries")
     ;
     po::positional_options_description popts;
     popts.add("image", 1);
@@ -150,6 +150,12 @@ int main(int argc, char **argv) {
         std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now();
         for (int i = 0; i < iterations; ++i) {
             std::cout << "Iteration " << i+1 << "\t\t";
+            if (i % 10 == 9) {
+                std::string tmpname = std::string("tmp+") + std::to_string(i+1) + ".pgm";
+                ImageToFile(current, tmpname.c_str());
+            }
+
+
             FusionStats stats;
             stats.iter = i;
 
