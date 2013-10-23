@@ -428,38 +428,41 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
     // all H in curlyH
     for (size_t varIndex = 0; varIndex < numPixels; ++varIndex) {
         VarRecord& vr = _varRecords[varIndex];
+        qr.AddUnaryTerm(vr._id, 0, vr._coeff);
         typename std::list<Term>::iterator termIt = vr._terms.begin();
         while (termIt != vr._terms.end()) {
             Term& t = *termIt;
             typename std::list<Term>::iterator currIt = termIt;
             ++termIt;
 
-            if (t.degree <= 2) {
-                qr.AddPairwiseTerm(t.vars[0], t.vars[1], 0, 0, 0, t.coeff);
-            } else {
-                VarIdSet_t s;
-                for (int i = 0; i < t.degree; ++i) {
-                    s.insert(t.vars[i]);
-                }
-
-                VarId newVars[2];
-                VarIdSet_t A;
-                VarIdSet_t B;
-                A.insert(t.vars[0]);
-                for (int i = 1; i < t.degree; ++i) {
-                    if ((t.vars[0] - t.vars[i]) % _width == 0) {
-                        A.insert(t.vars[i]);
-                    } else {
-                        B.insert(t.vars[i]);
-                    }
-                }
-                
-                newVars[0] = GetCoverRecord(A)._id;
-                newVars[1] = GetCoverRecord(B)._id;
-
-                qr.AddPairwiseTerm(newVars[0], newVars[1], 0, 0 , 0, t.coeff);
+            VarIdSet_t s;
+            for (int i = 0; i < t.degree; ++i) {
+                s.insert(t.vars[i]);
             }
-            vr._terms.erase(currIt);
+
+            VarId newVars[2];
+            VarIdSet_t A;
+            VarIdSet_t B;
+            A.insert(t.vars[0]);
+            for (int i = 1; i < t.degree; ++i) {
+                if ((t.vars[0] - t.vars[i]) % _width == 0) {
+                    A.insert(t.vars[i]);
+                } else {
+                    B.insert(t.vars[i]);
+                }
+            }
+
+            // 2x2 case only
+            if (B.empty()) {
+                A.clear();
+                A.insert(t.vars[0]);
+                B.insert(t.vars[1]);
+            }
+            
+            newVars[0] = GetCoverRecord(A)._id;
+            newVars[1] = GetCoverRecord(B)._id;
+
+            qr.AddPairwiseTerm(newVars[0], newVars[1], 0, 0 , 0, t.coeff);
         }
     }
 
@@ -473,7 +476,7 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
         }
 
         int newCoeff = cover._bkValue * (cover._size - .5);
-        _varRecords[cover._id]._coeff = newCoeff;
+        qr.AddUnaryTerm(cover._id, 0, newCoeff);
 
         typename VarIdSet_t::iterator coverElemsIt = cover._cover.begin();
         while (coverElemsIt != cover._cover.end()) {
@@ -484,10 +487,6 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
 
         // only for 2x2 case
         qr.AddPairwiseTerm(*cover._cover.begin(), *(++cover._cover.begin()), 0, 0, 0, .5*cover._bkValue);
-    }
-
-    BOOST_FOREACH(VarRecord& vr, _varRecords) {
-        qr.AddUnaryTerm(vr._id, 0, vr._coeff);
     }
 }
 
