@@ -78,10 +78,15 @@ int main(int argc, char **argv) {
     popts.add("image", 1);
 
     po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).
-            options(desc).positional(popts).run(), vm);
-
     try {
+        po::store(po::command_line_parser(argc, argv).
+                options(desc).positional(popts).run(), vm);
+        
+        if (vm.count("help")) {
+            std::cout << desc;
+            exit(0);
+        }
+
         po::notify(vm);
         if (param_methods.empty()) {
             methods.push_back(OptType::Fix);
