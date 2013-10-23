@@ -361,6 +361,7 @@ void HigherOrderEnergy<R, D>::_CalculateBkValues() {
             VarIdVector_t B;
             VarIdVector_t H;
             A.push_back(t.vars[0]);
+            H.push_back(t.vars[0]);
             for (int i = 1; i < t.degree; ++i) {
                 if ((t.vars[0] - t.vars[i]) % _width == 0) {
                     A.push_back(t.vars[i]);
