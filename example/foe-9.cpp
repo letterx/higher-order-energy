@@ -27,6 +27,9 @@ std::vector<double> gaussianKernel;
 double threshold = 100.0;
 int thresholdIters = 20;
 
+int width;
+int height;
+
 // Set up the RNGs
 static boost::mt19937 rng;
 static boost::uniform_int<> uniform255(0, 255);
@@ -275,8 +278,8 @@ Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, Clique
 CliqueSystem<REAL, unsigned char, 9> SetupCliques(const Image_uc& im) {
     FoE3x3Energy::InitFoE3x3();
     CliqueSystem<REAL, unsigned char, 9> cs;
-    int height = im.Height();
-    int width = im.Width();
+    height = im.Height();
+    width = im.Width();
     // For each 2x2 patch, add in a Field of Experts clique
     for (int i = 0; i < height - 2; ++i) {
         for (int j = 0; j < width - 2; ++j) {
