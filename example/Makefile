@@ -20,6 +20,8 @@ QPBO_OBJS = $(QPBO_SRCS:.cpp=.o)
 
 MAXFLOW_OBJS = ../grd/obj/submodular/graph.o ../grd/obj/submodular/maxflow.o
 
+SRCS = $(EXAMPLE_SRCS) $(QPBO_SRCS) foe-9.cpp test-pairwise.cpp
+
 LIBPETTER = ../grd/obj/submodular/libpetter.a
 
 TARGET = higher-order-example
@@ -31,26 +33,25 @@ $(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ $(EXAMPLE_OBJS) $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
 
-test-pairwise: test-pairwise.o $(QPBO_OBJS) $(MAXFLOW_OBJS) 
+test-pairwise: test-pairwise.o $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ test-pairwise.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
 
-test-pairwise.o: ../include/pairwise-cover.hpp test-pairwise.cpp
-	$(CXX) $(CXX_FLAGS) -o test-pairwise.o -c test-pairwise.cpp
-	
-
-foe-9: foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER) ../include/pairwise-cover.hpp 
+foe-9: foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
 
-%.o: %.cpp
-	$(CXX) $(CXX_FLAGS) -o $@ -c $<
-
-higher-order-example.o: ../include/pairwise-cover.hpp higher-order-example.cpp
-	$(CXX) $(CXX_FLAGS) -o higher-order-example.o -c higher-order-example.cpp
-
 $(LIBPETTER): $(QPBO_OBJS)
 	cd ../grd; make
+
+%.o: %.cpp
+	$(CXX) $(CXX_FLAGS) -MMD -o $@ -c $<
+	@cp $*.d $*.P; \
+	 sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+    	 -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+	 rm $*.d
+
+-include $(SRCS:.cpp=.P)
 
 .PHONY: clean
 clean: 
