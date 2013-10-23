@@ -365,7 +365,7 @@ inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
     //std::cout << "QPBO Energy:   " << qr.ComputeTwiceEnergy() << "\n";
     qr.Solve();
     qr.ComputeWeakPersistencies();
-    qr.Improve();
+    //qr.Improve();
 
     /*
     int one_labels = 0;

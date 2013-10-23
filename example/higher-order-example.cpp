@@ -27,6 +27,9 @@ std::vector<double> gaussianKernel;
 REAL threshold = 100.0 * DoubleToREAL;
 int thresholdIters = 20;
 
+int width = 0;
+int height = 0;
+
 // Set up the RNGs
 static boost::mt19937 rng;
 static boost::uniform_int<> uniform255(0, 255);
@@ -69,6 +72,7 @@ int main(int argc, char **argv) {
         ("original,o", po::value<std::string>(&original_name)->default_value(""), "Filename for original image -- for computing PSNR")
         ("grad,g", po::value<bool>(&grad_descent)->default_value(false), "Flag for using gradient descent proposals")
         ("eta", po::value<double>(&eta)->default_value(60.0), "Scale for gradient descent proposals")
+        ("sigma", po::value<double>(&FoEUnaryEnergy::sigma)->default_value(20.0), "Sigma for unary costs")
     ;
     po::positional_options_description popts;
     popts.add("image", 1);
@@ -93,6 +97,8 @@ int main(int argc, char **argv) {
                     methods.push_back(OptType::Fix);
                 } else if (m == std::string("pc")) {
                     methods.push_back(OptType::PC);
+                } else if (m == std::string("pc-grid")) {
+                    methods.push_back(OptType::PC_Grid);
                 } else {
                     std::cout << "Unrecognized method type: " << m << "\n";
                     exit(-1);
@@ -257,7 +263,7 @@ Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, Clique
         cp->AddGradient(grad.get(), im.Data());
     Image_uc proposed(im.Height(), im.Width());
     for (int i = 0; i < size; ++i) {
-        double value = ((double)im.At(i) - grad[i] * eta/(iteration + 1));
+        double value = ((double)im.At(i) - grad[i] * eta*7/(7 + iteration));
         if (value < 0)
             value = 0;
         if (value > 255)
@@ -270,8 +276,8 @@ Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, Clique
 
 CliqueSystem<REAL, unsigned char, 4> SetupCliques(const Image_uc& im) {
     CliqueSystem<REAL, unsigned char, 4> cs;
-    int height = im.Height();
-    int width = im.Width();
+    height = im.Height();
+    width = im.Width();
     // For each 2x2 patch, add in a Field of Experts clique
     for (int i = 0; i < height - 1; ++i) {
         for (int j = 0; j < width - 1; ++j) {

@@ -121,6 +121,9 @@ void GetFusedImage(size_t size,
         RandomAccessIterator out, 
         QuadraticRep& qr);
 
+extern int width;
+extern int height;
+
 /*
  * Implementation
  */
@@ -153,6 +156,15 @@ void FusionMove(FusionStats& stats,
         hoe.ToQuadratic(qr);
         //qr.Solve();
         //qr.ComputeWeakPersistencies();
+        GetFusedImage(stats, size, current, proposed, out, qr);
+    } else if (optType == OptType::PC_Grid) {
+        PairwiseCoverGrid<Energy, D> pc;
+        pc.SetWidth(width);
+        pc.SetHeight(height);
+        SetupFusionEnergy(size, current, proposed, cliqueSystem, pc);
+        pc.ToQuadratic(qr);
+        qr.Solve();
+        qr.ComputeWeakPersistencies();
         GetFusedImage(stats, size, current, proposed, out, qr);
     } else if (optType == OptType::HOCR) {
         PBF<Energy, D> pbf;

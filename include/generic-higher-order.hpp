@@ -3,6 +3,7 @@
 
 #include "higher-order-energy.hpp"
 #include "pairwise-cover.hpp"
+#include "pairwise-cover-grid.hpp"
 #include "HOCR.h"
 #include "PseudoBoolean.h"
 #include <string>
@@ -13,6 +14,7 @@ enum class OptType {
     GRD,
     GRD_Heur,
     PC,
+    PC_Grid,
     Grad
 };
 
@@ -23,6 +25,8 @@ inline std::string ToString(OptType ot) {
         case OptType::GRD: return "grd";
         case OptType::GRD_Heur: return "grd-heur";
         case OptType::PC: return "pc";
+        case OptType::PC_Grid: return "pc-grid";
+        case OptType::Grad: return "grad";
         default: return "unknown";
     }
 }
