@@ -353,7 +353,6 @@ void HigherOrderEnergy<R, D>::_CalculateBkValues() {
     int degree = D;
     while (degree > 1) {
         typename std::list<Term> terms = _termsByDegree[degree];
-        std::cout<<"degree "<<degree;
         typename std::list<Term>::iterator termIt = terms.begin();
         while (termIt != terms.end()) {
             Term& t = *termIt;
@@ -395,10 +394,6 @@ void HigherOrderEnergy<R, D>::_CalculateBkValues() {
 
 template <typename R, int D>
 void HigherOrderEnergy<R, D>::AddBkValue(VarIdSet_t set, int bkValue) {
-    if (set.empty()) {
-        return;
-    }
-
     typename Cover_t::iterator coverIt = _coverRecords.find(set);
     if (coverIt != _coverRecords.end()) {
         coverIt->second._bkValue += bkValue;
@@ -435,7 +430,7 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
     // all H in curlyH
     for (size_t varIndex = 0; varIndex < numPixels; ++varIndex) {
         VarRecord& vr = _varRecords[varIndex];
-        qr.AddUnaryTerm(vr._id, 0, vr._coeff);
+        qr.AddUnaryTerm(vr._id, 0, 2*vr._coeff);
         typename std::list<Term>::iterator termIt = vr._terms.begin();
         while (termIt != vr._terms.end()) {
             Term& t = *termIt;
@@ -468,7 +463,12 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
             newVars[0] = GetCoverRecord(A)._id;
             newVars[1] = GetCoverRecord(B)._id;
 
-            qr.AddPairwiseTerm(newVars[0], newVars[1], 0, 0 , 0, 2*t.coeff);
+            int bH = 0;
+            if (_coverRecords.find(s) != _coverRecords.end()) {
+                bH = _coverRecords.find(s)->second._bkValue;
+            }
+
+            qr.AddPairwiseTerm(newVars[0], newVars[1], 0, 0 , 0, 2*t.coeff+bH);
             vr._terms.erase(currIt);
         }
     }
@@ -493,7 +493,7 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
         }
 
         // only for 2x2 case
-        qr.AddPairwiseTerm(*cover._cover.begin(), *(++cover._cover.begin()), 0, 0, 0, cover._bkValue);
+//        qr.AddPairwiseTerm(*cover._cover.begin(), *(++cover._cover.begin()), 0, 0, 0, cover._bkValue);
     }
 }
 
