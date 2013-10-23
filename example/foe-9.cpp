@@ -261,7 +261,7 @@ Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, Clique
         cp->AddGradient(grad.get(), im.Data());
     Image_uc proposed(im.Height(), im.Width());
     for (int i = 0; i < size; ++i) {
-        double value = ((double)im.At(i) - grad[i] * eta/(iteration + 1));
+        double value = ((double)im.At(i) - grad[i] * eta*7/(7+iteration));
         if (value < 0)
             value = 0;
         if (value > 255)
