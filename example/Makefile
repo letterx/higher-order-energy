@@ -29,7 +29,7 @@ $(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS)
 
 .PHONY: test
 test: $(TARGET)
-	./$(TARGET) medium-out.pgm medium-test.pgm
+	./$(TARGET) medium-test.pgm medium-test-out.pgm
 
 .PHONY: clean
 clean: 
