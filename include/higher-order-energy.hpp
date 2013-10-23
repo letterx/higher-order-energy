@@ -65,7 +65,7 @@ class HigherOrderEnergy {
     public:
         typedef int VarId;
         typedef VarId NodeId;
-        typedef std::vector<VarId> VarIdVector_t;
+        typedef std::set<VarId> VarIdSet_t;
 
         // Constructs empty HigherOrderEnergy with no variables or terms
         HigherOrderEnergy();
@@ -145,17 +145,17 @@ class HigherOrderEnergy {
         };
 
         struct CoverRecord {
-            CoverRecord(VarId id, VarIdVector_t set)
+            CoverRecord(VarId id, VarIdSet_t set)
                 : _id(id), _bkValue(0), _cover(set), _size(set.size()) { }
 
             VarId _id;
-            double _bkValue;
-            VarIdVector_t _cover;
+            int _bkValue;
+            VarIdSet_t _cover;
             int _size;
         };
 
         struct VectorHash {
-            std::size_t operator()(VarIdVector_t const& c) const {
+            std::size_t operator()(VarIdSet_t const& c) const {
                 return boost::hash_range(c.begin(), c.end());
             }
         };
@@ -164,13 +164,13 @@ class HigherOrderEnergy {
 
         void RemoveTerm(Term* tp);
         template <typename QR>
-        void _VectorupPairwiseCover(QR& qr);
+        void _SetupPairwiseCover(QR& qr);
         void _CalculateBkValues();
         template <typename QR>
         void _EliminateTerms(QR& qr);
         void _ReportMultilinearStats();
-        void AddBkValue(VarIdVector_t set, int bkValue);
-        CoverRecord GetCoverRecord(VarIdVector_t set);
+        void AddBkValue(VarIdSet_t set, int bkValue);
+        CoverRecord GetCoverRecord(VarIdSet_t set);
 
         size_t NumTerms() const {
             size_t numTerms = 0;
@@ -186,7 +186,7 @@ class HigherOrderEnergy {
         typedef std::vector<VarRecord> VarRecordVec_t;
         VarRecordVec_t _varRecords;
         std::vector<std::list<Term> > _termsByDegree;
-        typedef std::unordered_map<VarIdVector_t, CoverRecord, VectorHash> Cover_t;
+        typedef std::unordered_map<VarIdSet_t, CoverRecord, VectorHash> Cover_t;
         Cover_t _coverRecords;
 };
 
@@ -324,24 +324,24 @@ inline void HigherOrderEnergy<R, D>::AddUnaryTerm(VarId var, R coeff) {
 
 template<typename R, int D>
 template<typename QR>
-void HigherOrderEnergy<R, D>::_VectorupPairwiseCover(QR& qr) {
+void HigherOrderEnergy<R, D>::_SetupPairwiseCover(QR& qr) {
     // TODO(irwinherrmann) more abstracted in the future. also consider 3x3 case.
     // 2x1 vertical block
     for (int varIndex = 0; varIndex < _width * (_height - 1); ++varIndex) {
         VarId newVar = AddVar();
-        VarIdVector_t set;
+        VarIdSet_t set;
         VarRecord& vr = _varRecords[varIndex];
-        set.push_back(vr._id);
-        set.push_back(vr._id + _width);
+        set.insert(vr._id);
+        set.insert(vr._id + _width);
         CoverRecord cr(newVar, set);
         _coverRecords.insert(std::make_pair(set, cr));
     }
 
     // 1x1 unary block
     for (int varIndex = 0; varIndex < _width * _height; ++varIndex) {
-        VarIdVector_t set;
+        VarIdSet_t set;
         VarRecord& vr = _varRecords[varIndex];
-        set.push_back(vr._id);
+        set.insert(vr._id);
         CoverRecord cr(vr._id, set);
         _coverRecords.insert(std::make_pair(set, cr));
     }
@@ -351,23 +351,30 @@ template <typename R, int D>
 void HigherOrderEnergy<R, D>::_CalculateBkValues() {
     // TODO(irwinherrmann) more abstracted
     int degree = D;
-    while (degree > 0) {
+    while (degree > 1) {
         typename std::list<Term> terms = _termsByDegree[degree];
+        std::cout<<"degree "<<degree;
         typename std::list<Term>::iterator termIt = terms.begin();
         while (termIt != terms.end()) {
             Term& t = *termIt;
-            VarIdVector_t A;
-            VarIdVector_t B;
-            VarIdVector_t H;
-            A.push_back(t.vars[0]);
-            H.push_back(t.vars[0]);
+            VarIdSet_t A;
+            VarIdSet_t B;
+            VarIdSet_t H;
+            A.insert(t.vars[0]);
+            H.insert(t.vars[0]);
             for (int i = 1; i < t.degree; ++i) {
                 if ((t.vars[0] - t.vars[i]) % _width == 0) {
-                    A.push_back(t.vars[i]);
+                    A.insert(t.vars[i]);
                 } else {
-                    B.push_back(t.vars[i]);
+                    B.insert(t.vars[i]);
                 }
-                H.push_back(t.vars[i]);
+                H.insert(t.vars[i]);
+            }
+
+            if (B.empty()) {
+                A.clear();
+                A.insert(t.vars[0]);
+                B.insert(t.vars[1]);
             }
  
             double bK = 2 * std::abs(t.coeff);
@@ -387,7 +394,7 @@ void HigherOrderEnergy<R, D>::_CalculateBkValues() {
 }
 
 template <typename R, int D>
-void HigherOrderEnergy<R, D>::AddBkValue(VarIdVector_t set, int bkValue) {
+void HigherOrderEnergy<R, D>::AddBkValue(VarIdSet_t set, int bkValue) {
     if (set.empty()) {
         return;
     }
@@ -401,7 +408,7 @@ void HigherOrderEnergy<R, D>::AddBkValue(VarIdVector_t set, int bkValue) {
 }
 
 template <typename R, int D>
-inline typename HigherOrderEnergy<R, D>::CoverRecord HigherOrderEnergy<R, D>::GetCoverRecord(VarIdVector_t set) {
+inline typename HigherOrderEnergy<R, D>::CoverRecord HigherOrderEnergy<R, D>::GetCoverRecord(VarIdSet_t set) {
     typename Cover_t::iterator coverIt = _coverRecords.find(set);
     if (coverIt != _coverRecords.end()) {
         return coverIt->second;
@@ -435,34 +442,34 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
             typename std::list<Term>::iterator currIt = termIt;
             ++termIt;
 
-            VarIdVector_t s;
+            VarIdSet_t s;
             for (int i = 0; i < t.degree; ++i) {
-                s.push_back(t.vars[i]);
+                s.insert(t.vars[i]);
             }
 
             VarId newVars[2];
-            VarIdVector_t A;
-            VarIdVector_t B;
-            A.push_back(t.vars[0]);
+            VarIdSet_t A;
+            VarIdSet_t B;
+            A.insert(t.vars[0]);
             for (int i = 1; i < t.degree; ++i) {
                 if ((t.vars[0] - t.vars[i]) % _width == 0) {
-                    A.push_back(t.vars[i]);
+                    A.insert(t.vars[i]);
                 } else {
-                    B.push_back(t.vars[i]);
+                    B.insert(t.vars[i]);
                 }
             }
 
-            // 2x2 case only
             if (B.empty()) {
                 A.clear();
-                A.push_back(t.vars[0]);
-                B.push_back(t.vars[1]);
+                A.insert(t.vars[0]);
+                B.insert(t.vars[1]);
             }
             
             newVars[0] = GetCoverRecord(A)._id;
             newVars[1] = GetCoverRecord(B)._id;
 
-            qr.AddPairwiseTerm(newVars[0], newVars[1], 0, 0 , 0, t.coeff);
+            qr.AddPairwiseTerm(newVars[0], newVars[1], 0, 0 , 0, 2*t.coeff);
+            vr._terms.erase(currIt);
         }
     }
 
@@ -475,25 +482,25 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
             continue;
         }
 
-        int newCoeff = cover._bkValue * (cover._size - .5);
+        int newCoeff = cover._bkValue * (2*cover._size - 1);
         qr.AddUnaryTerm(cover._id, 0, newCoeff);
 
-        typename VarIdVector_t::iterator coverElemsIt = cover._cover.begin();
+        typename VarIdSet_t::iterator coverElemsIt = cover._cover.begin();
         while (coverElemsIt != cover._cover.end()) {
             VarId var = *coverElemsIt;
-            qr.AddPairwiseTerm(var, cover._id, 0, 0, 0, -cover._bkValue);
+            qr.AddPairwiseTerm(var, cover._id, 0, 0, 0, -2*cover._bkValue);
             ++coverElemsIt;
         }
 
         // only for 2x2 case
-        qr.AddPairwiseTerm(*cover._cover.begin(), *(++cover._cover.begin()), 0, 0, 0, .5*cover._bkValue);
+        qr.AddPairwiseTerm(*cover._cover.begin(), *(++cover._cover.begin()), 0, 0, 0, cover._bkValue);
     }
 }
 
 template <typename R, int D>
 template <typename QR>
 inline void HigherOrderEnergy<R, D>::ToQuadratic(QR& qr) {
-    _VectorupPairwiseCover(qr);
+    _SetupPairwiseCover(qr);
     _CalculateBkValues();
     _EliminateTerms(qr);
 }
