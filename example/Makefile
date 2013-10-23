@@ -52,10 +52,6 @@ higher-order-example.o: ../include/pairwise-cover.hpp higher-order-example.cpp
 $(LIBPETTER): $(QPBO_OBJS)
 	cd ../grd; make
 
-.PHONY: test
-test: $(TARGET)
-	./$(TARGET) medium-test.pgm medium-out.pgm
-
 .PHONY: clean
 clean: 
 	rm -f $(EXAMPLE_OBJS)
