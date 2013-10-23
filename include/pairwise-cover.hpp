@@ -142,7 +142,7 @@ inline void PairwiseCover<R, D>::AddClique(const std::vector<VarId>& vars,
         const std::vector<R>& energyTable) {
     const unsigned int size = vars.size();
     assert(size > 1);
-    const unsigned int numAssignments = 1 << size;
+    Assgn numAssignments = 1 << size;
     assert(energyTable.size() == numAssignments);
 
     _cliques.push_back(Clique());
@@ -160,26 +160,14 @@ inline void PairwiseCover<R, D>::AddClique(const std::vector<VarId>& vars,
 
     // For each boolean assignment, add that to the corresponding monomials
     // with the correct parity
-    for (unsigned int assignment = 0; 
-            assignment < numAssignments; 
-            ++assignment) 
-    {
+    for (Assgn assignment = 0; assignment < numAssignments; ++assignment) {
         const R energy = energyTable[assignment];
-        for (unsigned int subset = 0; 
-                subset < numAssignments; 
-                ++subset) 
-        {
-            if (assignment & ~subset) {
-                continue;
-            } else {
-                int parity = 0;
-                for (unsigned int b = 0; b < size; ++b) {
-                    parity ^= 
-                        (((assignment ^ subset) & (1 << b)) != 0);
-                }
-                c.subset_coeffs[subset] += parity ? -energy : energy;
-            }
+        Assgn assignment_bar = (numAssignments-1)^assignment;
+        for (Assgn subset = assignment_bar; subset > 0; subset = (subset-1)&assignment_bar) {
+            int parity = __builtin_parity(subset);
+            c.subset_coeffs[subset|assignment] += parity ? -energy : energy;
         }
+        c.subset_coeffs[assignment] += energy;
     }
     ComputeBeta(c);
 }
