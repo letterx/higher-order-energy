@@ -82,7 +82,7 @@ int NumQRNodes(const PairwiseCover<R, 4>& pc) {
 
 template <typename R, int D>
 int NumQREdges(const PairwiseCover<R, D>& pc) {
-    return (1 << D)*pc.NumCliques();
+    return pc.NumCliques();
 }
 
 template <typename R>
