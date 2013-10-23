@@ -206,6 +206,11 @@ void FusionMove(FusionStats& stats,
                 out[i] = current[i];
             }
         }
+    } else if (optType == OptType::Grad) {
+        for (size_t i = 0; i < size; ++i) {
+            out[i] = proposed[i];
+        }
+        stats.labeled = stats.swaps = size;
     }
     std::chrono::duration<double> time = std::chrono::system_clock::now() - start;
     stats.time = time.count();

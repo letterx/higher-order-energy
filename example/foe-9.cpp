@@ -24,7 +24,7 @@
 double sigma = 20.0;
 int kernelRadius;
 std::vector<double> gaussianKernel;
-REAL threshold = 100.0 * DoubleToREAL;
+double threshold = 100.0;
 int thresholdIters = 20;
 
 // Set up the RNGs
@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
         ("original,o", po::value<std::string>(&original_name)->default_value(""), "Filename for original image -- for computing PSNR")
         ("grad,g", po::value<bool>(&grad_descent)->default_value(false), "Flag for using gradient descent proposals")
         ("eta", po::value<double>(&eta)->default_value(60.0), "Scale for gradient descent proposals")
+        ("thresh", po::value<double>(&threshold)->default_value(100.0), "Threshold to stop optimization")
     ;
     po::positional_options_description popts;
     popts.add("image", 1);
@@ -91,6 +92,10 @@ int main(int argc, char **argv) {
                     methods.push_back(OptType::GRD_Heur);
                 } else if (m == std::string("fix")) {
                     methods.push_back(OptType::Fix);
+                } else if (m == std::string("pc")) {
+                    methods.push_back(OptType::PC);
+                } else if (m == std::string("grad")) {
+                    methods.push_back(OptType::Grad);
                 } else {
                     std::cout << "Unrecognized method type: " << m << "\n";
                     exit(-1);
@@ -148,7 +153,7 @@ int main(int argc, char **argv) {
             stats.initialEnergy = energy;
             // check if we've reached convergence
             if (i > thresholdIters 
-                    && energies[i%thresholdIters] - energy < threshold) {
+                    && energies[i%thresholdIters] - energy < threshold*DoubleToREAL) {
                 break;
             }
             // Do some statistic gathering
@@ -168,7 +173,7 @@ int main(int argc, char **argv) {
                     std::cout << "\t" << ToString(lockstep_ot) << "...\t";
                     std::cout.flush();
                     Image_uc tmp(current.Height(), current.Width());
-                    FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), tmp.Data(), cliques, lockstep_ot);
+                    FusionMove(stats, current.Height()*current.Width(), proposed.Data(), current.Data(), tmp.Data(), cliques, lockstep_ot);
                     REAL e = cliques.Energy(tmp.Data()); 
                     std::cout << e << "\n";
 
@@ -182,7 +187,7 @@ int main(int argc, char **argv) {
                 }
                 current.Copy(outputs[0]);
             } else {
-                FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques, ot);
+                FusionMove(stats, current.Height()*current.Width(), proposed.Data(), current.Data(), current.Data(), cliques, ot);
                 stats.finalEnergy = cliques.Energy(current.Data());
                 if (computePSNR)
                     stats.psnr = getPSNR(current, original);
@@ -260,7 +265,7 @@ Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, Clique
             value = 0;
         if (value > 255)
             value = 255;
-        proposed.At(i) = (unsigned char) value;
+        proposed.At(i) = (unsigned char) round(value);
         //proposed.At(i) = (unsigned char)(double)im.At(i);
     }
     return proposed;

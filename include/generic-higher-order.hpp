@@ -12,7 +12,8 @@ enum class OptType {
     HOCR,
     GRD,
     GRD_Heur,
-    PC
+    PC,
+    Grad
 };
 
 inline std::string ToString(OptType ot) {
