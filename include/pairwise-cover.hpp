@@ -364,6 +364,8 @@ inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
     //std::cout << "Before Energy: " << ComputeEnergy2(qr) << "\n";
     //std::cout << "QPBO Energy:   " << qr.ComputeTwiceEnergy() << "\n";
     qr.Solve();
+    qr.ComputeWeakPersistencies();
+    qr.Improve();
 
     /*
     int one_labels = 0;
@@ -428,7 +430,6 @@ inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
     */
     //std::cout << "Auxilliary labels: " << aux_labels << "\n";
     //std::cout << "Auxilliary swaps: " << one_labels << "\n";
-    qr.ComputeWeakPersistencies();
     //std::cout << "After Energy:  " << ComputeEnergy(qr) << "\n";
     //std::cout << "After Energy:  " << ComputeEnergy2(qr) << "\n";
     //std::cout << "QPBO Energy:   " << qr.ComputeTwiceEnergy(1) << "\n";
