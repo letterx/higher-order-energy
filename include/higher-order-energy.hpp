@@ -163,9 +163,12 @@ class HigherOrderEnergy {
         R _constantTerm;
 
         void RemoveTerm(Term* tp);
-        void _SetupPairwiseCover();
+        template <typename QR>
+        void _SetupPairwiseCover(QR& qr);
         void _CalculateBkValues();
         void _EliminateTerms();
+        template <typename QR>
+        void _SetupQR(QR& qr);
         void _ReportMultilinearStats();
         void AddBkValue(VarIdVector_t set, int bkValue);
         CoverRecord GetCoverRecord(VarIdVector_t set);
@@ -321,7 +324,8 @@ inline void HigherOrderEnergy<R, D>::AddUnaryTerm(VarId var, R coeff) {
 
 
 template<typename R, int D>
-void HigherOrderEnergy<R, D>::_SetupPairwiseCover() {
+template<typename QR>
+void HigherOrderEnergy<R, D>::_SetupPairwiseCover(QR& qr) {
     // TODO(irwinherrmann) more abstracted in the future. also consider 3x3 case.
     // 2x1 vertical block
     for (int varIndex = 0; varIndex < _width * (_height - 1); ++varIndex) {
@@ -330,7 +334,7 @@ void HigherOrderEnergy<R, D>::_SetupPairwiseCover() {
         VarRecord& vr = _varRecords[varIndex];
         set.push_back(vr._id);
         set.push_back(vr._id + _width);
-        CoverRecord cr(vr._id, set);
+        CoverRecord cr(newVar, set);
         _coverRecords.insert(std::make_pair(set, cr));
     }
 
@@ -342,8 +346,6 @@ void HigherOrderEnergy<R, D>::_SetupPairwiseCover() {
         CoverRecord cr(vr._id, set);
         _coverRecords.insert(std::make_pair(set, cr));
     }
-
-    std::cout<<"setup covers"<<std::endl;
 }
 
 template <typename R, int D>
@@ -382,7 +384,6 @@ void HigherOrderEnergy<R, D>::_CalculateBkValues() {
         }
         --degree;
     }
-    std::cout<<"after calculate bk"<<std::endl;
 }
 
 template <typename R, int D>
@@ -396,6 +397,44 @@ void HigherOrderEnergy<R, D>::AddBkValue(VarIdVector_t set, int bkValue) {
         coverIt->second._bkValue += bkValue;
     } else {
         exit(1); // Error
+    }
+}
+
+template <typename R, int D>
+template <typename QR>
+void HigherOrderEnergy<R, D>::_SetupQR(QR& qr) {
+    // Estimate expected size of quadratic problem. Only nodes/edges are
+    // created below, so we can count them ahead of time
+    int expectedVars = _varCounter;
+    int expectedEdges = 0;
+    BOOST_FOREACH(const VarRecord& vr, _varRecords) {
+        expectedVars += vr._higherOrderTerms;
+        expectedEdges += vr._quadraticTerms;
+        expectedEdges += vr._sumDegrees;
+    }
+
+    //std::cout << "\tExpected Vars: " << expectedVars << "\tExpected Edges: " << expectedEdges << std::endl;
+
+    qr.SetMaxEdgeNum(expectedEdges);
+    qr.AddNode(_varCounter);
+
+    // Term-by-term reduction from Friedman & Drineas
+    BOOST_FOREACH(VarRecord& vr, _varRecords) {
+        BOOST_FOREACH(Term& t, vr._terms) {
+            if (t.degree == 2) {
+                qr.AddPairwiseTerm(t.vars[0], t.vars[1], 0, 0, 0, t.coeff);
+            } else {
+                typename QR::NodeId w = qr.AddNode();
+                assert(t.coeff <= 0);
+                for (int i = 0; i < t.degree; ++i) {
+                    qr.AddPairwiseTerm(t.vars[i], w, 0, 0, 0, t.coeff);
+                }
+                qr.AddUnaryTerm(w, 0, t.coeff*(1-t.degree));
+            }
+        }
+    }
+    BOOST_FOREACH(VarRecord& vr, _varRecords) {
+        qr.AddUnaryTerm(vr._id, 0, vr._coeff);
     }
 }
 
@@ -451,17 +490,22 @@ void HigherOrderEnergy<R, D>::_EliminateTerms() {
             }
             
             newVars[0] = GetCoverRecord(A)._id;
-            newVars[0] = GetCoverRecord(B)._id;
+            newVars[1] = GetCoverRecord(B)._id;
 
             AddTerm(newCoeff, 2, newVars);
             vr._terms.erase(currIt);
         }
     }
 
-    std::cout<<"after all H"<<std::endl;
     typename Cover_t::iterator coverIt = _coverRecords.begin();
     while (coverIt != _coverRecords.end()) {
         CoverRecord cover = coverIt -> second;
+        ++coverIt;
+
+        if (cover._size < 2) {
+            continue;
+        }
+
         int newCoeff = -cover._bkValue * (cover._size - .5);
         _varRecords[cover._id]._coeff = newCoeff;
 
@@ -474,29 +518,16 @@ void HigherOrderEnergy<R, D>::_EliminateTerms() {
             AddTerm(newCoeff, 2, newVars);
             ++coverElemsIt;
         }
-
-        ++coverIt;
     }
-    std::cout<<"after all K"<<std::endl;
 }
 
 template <typename R, int D>
 template <typename QR>
 inline void HigherOrderEnergy<R, D>::ToQuadratic(QR& qr) {
-    _SetupPairwiseCover();
+    _SetupPairwiseCover(qr);
     _CalculateBkValues();
     _EliminateTerms();
-    std::cout<<"end of quadratic" << std::endl;
-    for (int i = 0; i < _varRecords.size(); i++) {
-        VarRecord vr = _varRecords[i];
-        for (Term t : vr._terms) {
-            if (t.degree > 2) {
-                std::cout<<"what??"<<std::endl;
-            }
-        }
-    }
-    std::cout<<_varRecords.size()<<std::endl;
-    std::cout<<"nope"<<std::endl;
+    _SetupQR(qr);
 }
 
 template <typename R, int D>
