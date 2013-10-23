@@ -472,7 +472,7 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
             continue;
         }
 
-        int newCoeff = -cover._bkValue * (cover._size - .5);
+        int newCoeff = cover._bkValue * (cover._size - .5);
         _varRecords[cover._id]._coeff = newCoeff;
 
         typename VarIdSet_t::iterator coverElemsIt = cover._cover.begin();
@@ -483,7 +483,7 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
         }
 
         // only for 2x2 case
-        qr.AddPairwiseTerm(*cover._cover.begin(), *(++cover._cover.begin()), 0, 0, 0, .5);
+        qr.AddPairwiseTerm(*cover._cover.begin(), *(++cover._cover.begin()), 0, 0, 0, .5*cover._bkValue);
     }
 
     BOOST_FOREACH(VarRecord& vr, _varRecords) {
