@@ -421,6 +421,7 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
     int expectedEdges = 0;
     BOOST_FOREACH(const VarRecord& vr, _varRecords) {
         expectedEdges += vr._quadraticTerms;
+        expectedEdges += vr._higherOrderTerms;
     }
 
     qr.SetMaxEdgeNum(expectedEdges);
@@ -491,9 +492,6 @@ void HigherOrderEnergy<R, D>::_EliminateTerms(QR& qr) {
             qr.AddPairwiseTerm(var, cover._id, 0, 0, 0, -2*cover._bkValue);
             ++coverElemsIt;
         }
-
-        // only for 2x2 case
-//        qr.AddPairwiseTerm(*cover._cover.begin(), *(++cover._cover.begin()), 0, 0, 0, cover._bkValue);
     }
 }
 
