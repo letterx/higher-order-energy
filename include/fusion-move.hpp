@@ -154,8 +154,10 @@ void FusionMove(FusionStats& stats,
         PairwiseCover<Energy, D> hoe;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
         hoe.ToQuadratic(qr);
-        //qr.Solve();
-        //qr.ComputeWeakPersistencies();
+        qr.Solve();
+        qr.ComputeWeakPersistencies();
+        //qr.Improve();
+        hoe.FixLabels(qr);
         GetFusedImage(stats, size, current, proposed, out, qr);
     } else if (optType == OptType::PC_Grid) {
         PairwiseCoverGrid<Energy, D> pc;
