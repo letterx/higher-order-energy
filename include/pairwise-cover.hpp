@@ -327,14 +327,14 @@ void CliqueToQuadratic(const PairwiseCover<R, 4>& pc, const typename PairwiseCov
     // Edges involving a_node
     qr.AddPairwiseTerm(c.vars[0], c.vars[1], 0, 0, 0, 2*c.subset_coeffs[a_var] + beta_a);
     qr.AddUnaryTerm(a_node, 0, beta_a*3);
-    qr.AddPairwiseTerm(a_node, 0, 0, 0, 0, -2*beta_a);
-    qr.AddPairwiseTerm(a_node, 1, 0, 0, 0, -2*beta_a);
+    qr.AddPairwiseTerm(a_node, c.vars[0], 0, 0, 0, -2*beta_a);
+    qr.AddPairwiseTerm(a_node, c.vars[1], 0, 0, 0, -2*beta_a);
 
     // Edges involving b_node
     qr.AddPairwiseTerm(c.vars[2], c.vars[3], 0, 0, 0, 2*c.subset_coeffs[b_var] + beta_b);
     qr.AddUnaryTerm(b_node, 0, beta_b*3);
-    qr.AddPairwiseTerm(b_node, 2, 0, 0, 0, -2*beta_b);
-    qr.AddPairwiseTerm(b_node, 3, 0, 0, 0, -2*beta_b);
+    qr.AddPairwiseTerm(b_node, c.vars[2], 0, 0, 0, -2*beta_b);
+    qr.AddPairwiseTerm(b_node, c.vars[3], 0, 0, 0, -2*beta_b);
     
     // Rest of the edges
     qr.AddPairwiseTerm(c.vars[0], c.vars[2], 0, 0, 0, 2*c.subset_coeffs[5]);
@@ -436,16 +436,16 @@ void FixClique(const PairwiseCover<R, 4>& pc, const typename PairwiseCover<R, 4>
     auto a_node = node_base++;
     auto b_node = node_base++;
     if (qr.GetLabel(c.vars[0]) == 1 && qr.GetLabel(c.vars[1]) == 1)
-        assert(qr.GetLabel(c.vars[a_node]) == 1);
+        assert(qr.GetLabel(a_node) != 0);
     if (qr.GetLabel(c.vars[2]) == 1 && qr.GetLabel(c.vars[3]) == 1)
-        assert(qr.GetLabel(c.vars[b_node]) == 1);
+        assert(qr.GetLabel(b_node) != 0);
     if (qr.GetLabel(a_node) == 1) {
-        //assert(qr.GetLabel(c.vars[0]) != 0 && qr.GetLabel(c.vars[1]) != 0);
+        assert(qr.GetLabel(c.vars[0]) != 0 && qr.GetLabel(c.vars[1]) != 0);
         qr.SetLabel(c.vars[0], 1);
         qr.SetLabel(c.vars[1], 1);
     }
     if (qr.GetLabel(b_node) == 1) {
-        //assert(qr.GetLabel(c.vars[2]) != 0 && qr.GetLabel(c.vars[3]) != 0);
+        assert(qr.GetLabel(c.vars[2]) != 0 && qr.GetLabel(c.vars[3]) != 0);
         qr.SetLabel(c.vars[2], 1);
         qr.SetLabel(c.vars[3], 1);
     }
@@ -458,7 +458,7 @@ template <typename QR>
 inline void PairwiseCover<R, D>::FixLabels(QR& qr) {
     NodeId node_base = _varCounter;
     for (const Clique& c : _cliques) {
-        FixClique(*this, c, qr, node_base);
+        //FixClique(*this, c, qr, node_base);
     }
     //std::cout << "Auxilliary labels: " << aux_labels << "\n";
     //std::cout << "Auxilliary swaps: " << one_labels << "\n";
