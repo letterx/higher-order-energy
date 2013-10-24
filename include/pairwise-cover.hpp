@@ -41,6 +41,9 @@ class PairwiseCover {
         template <typename QR>
         void ToQuadratic(QR &qr);
 
+        template <typename QR>
+        void FixLabels(QR& qr);
+
         struct Clique {
             int size;
             VarId vars[D];
@@ -364,67 +367,99 @@ inline void PairwiseCover<R, D>::ToQuadratic(QR& qr) {
     //std::cout << "Before Energy: " << ComputeEnergy2(qr) << "\n";
     //std::cout << "QPBO Energy:   " << qr.ComputeTwiceEnergy() << "\n";
 
+}
+
+template <typename R, int D, typename QR>
+void FixClique(const PairwiseCover<R, D>& pc, const typename PairwiseCover<R, D>::Clique& c, QR& qr, int& node_base) {
     /*
-    int one_labels = 0;
-    int aux_labels = 0;
-    NodeId node_base = _varCounter;
-    for (const Clique& c : _cliques) {
-        NodeId a_nodes = node_base;
-        node_base += c.a_coeffs.size();
-        NodeId b_nodes = node_base;
-        node_base += c.b_coeffs.size();
-        Assgn everything = (1 << c.size) - 1;
-        Assgn a_vars = (1 << c.a_size) - 1;
-        Assgn b_vars = everything & ~a_vars;
-        for (Assgn a = 0; a <= a_vars; ++a) {
-            if (__builtin_popcount(a) > 1) {
-                int label = qr.GetLabel(a_nodes + a);
-                if (label >= 0) aux_labels++;
-                if (label == 1) {
-                    one_labels++;
-                    for (int i = 0; i < c.size; ++i) {
-                        if (a & (1 << i)) {
-                            assert(qr.GetLabel(c.vars[i]) != 0);
-                            qr.SetLabel(c.vars[i], 1);
-                            assert(qr.GetLabel(c.vars[i]) == 1);
-                        }
+    NodeId a_nodes = node_base;
+    node_base += c.a_coeffs.size();
+    NodeId b_nodes = node_base;
+    node_base += c.b_coeffs.size();
+    Assgn everything = (1 << c.size) - 1;
+    Assgn a_vars = (1 << c.a_size) - 1;
+    Assgn b_vars = everything & ~a_vars;
+    for (Assgn a = 0; a <= a_vars; ++a) {
+        if (__builtin_popcount(a) > 1) {
+            int label = qr.GetLabel(a_nodes + a);
+            if (label >= 0) aux_labels++;
+            if (label == 1) {
+                one_labels++;
+                for (int i = 0; i < c.size; ++i) {
+                    if (a & (1 << i)) {
+                        assert(qr.GetLabel(c.vars[i]) != 0);
+                        qr.SetLabel(c.vars[i], 1);
+                        assert(qr.GetLabel(c.vars[i]) == 1);
                     }
-                } else {
-                    bool sublabeled = true;
-                    for (int i = 0; i < c.size; ++i) {
-                        if ((a & (1 << i)) && (qr.GetLabel(a_nodes+a) < 1))
-                            sublabeled = false;
-                    }
-                    assert(!sublabeled);
                 }
+            } else {
+                bool sublabeled = true;
+                for (int i = 0; i < c.size; ++i) {
+                    if ((a & (1 << i)) && (qr.GetLabel(a_nodes+a) < 1))
+                        sublabeled = false;
+                }
+                assert(!sublabeled);
             }
         }
-        for (Assgn b = 0; b <= (b_vars >> c.a_size); ++b) {
-            Assgn shifted_b = b << c.a_size;
-            if (__builtin_popcount(shifted_b) > 1) {
-                int label = qr.GetLabel(b_nodes + b);
-                if (label >= 0) aux_labels++;
-                if (label == 1) {
-                    one_labels++;
-                    for (int i = 0; i < c.size; ++i) {
-                        if (shifted_b & (1 << i)) {
-                            assert(qr.GetLabel(c.vars[i]) != 0);
-                            qr.SetLabel(c.vars[i], 1);
-                            assert(qr.GetLabel(c.vars[i]) == 1);
-                        }
+    }
+    for (Assgn b = 0; b <= (b_vars >> c.a_size); ++b) {
+        Assgn shifted_b = b << c.a_size;
+        if (__builtin_popcount(shifted_b) > 1) {
+            int label = qr.GetLabel(b_nodes + b);
+            if (label >= 0) aux_labels++;
+            if (label == 1) {
+                one_labels++;
+                for (int i = 0; i < c.size; ++i) {
+                    if (shifted_b & (1 << i)) {
+                        assert(qr.GetLabel(c.vars[i]) != 0);
+                        qr.SetLabel(c.vars[i], 1);
+                        assert(qr.GetLabel(c.vars[i]) == 1);
                     }
-                } else {
-                    bool sublabeled = true;
-                    for (int i = 0; i < c.size; ++i) {
-                        if ((shifted_b & (1 << i)) && (qr.GetLabel(b_nodes+b) < 1))
-                            sublabeled = false;
-                    }
-                    assert(!sublabeled);
                 }
+            } else {
+                bool sublabeled = true;
+                for (int i = 0; i < c.size; ++i) {
+                    if ((shifted_b & (1 << i)) && (qr.GetLabel(b_nodes+b) < 1))
+                        sublabeled = false;
+                }
+                assert(!sublabeled);
             }
         }
     }
     */
+}
+
+template <typename R, typename QR>
+void FixClique(const PairwiseCover<R, 4>& pc, const typename PairwiseCover<R, 4>::Clique& c, QR& qr, int& node_base) {
+    assert(c.size == 4);
+    typedef uint32_t Assgn;
+    auto a_node = node_base++;
+    auto b_node = node_base++;
+    if (qr.GetLabel(c.vars[0]) == 1 && qr.GetLabel(c.vars[1]) == 1)
+        assert(qr.GetLabel(c.vars[a_node]) == 1);
+    if (qr.GetLabel(c.vars[2]) == 1 && qr.GetLabel(c.vars[3]) == 1)
+        assert(qr.GetLabel(c.vars[b_node]) == 1);
+    if (qr.GetLabel(a_node) == 1) {
+        //assert(qr.GetLabel(c.vars[0]) != 0 && qr.GetLabel(c.vars[1]) != 0);
+        qr.SetLabel(c.vars[0], 1);
+        qr.SetLabel(c.vars[1], 1);
+    }
+    if (qr.GetLabel(b_node) == 1) {
+        //assert(qr.GetLabel(c.vars[2]) != 0 && qr.GetLabel(c.vars[3]) != 0);
+        qr.SetLabel(c.vars[2], 1);
+        qr.SetLabel(c.vars[3], 1);
+    }
+
+
+}
+
+template <typename R, int D>
+template <typename QR>
+inline void PairwiseCover<R, D>::FixLabels(QR& qr) {
+    NodeId node_base = _varCounter;
+    for (const Clique& c : _cliques) {
+        FixClique(*this, c, qr, node_base);
+    }
     //std::cout << "Auxilliary labels: " << aux_labels << "\n";
     //std::cout << "Auxilliary swaps: " << one_labels << "\n";
     //std::cout << "After Energy:  " << ComputeEnergy(qr) << "\n";
