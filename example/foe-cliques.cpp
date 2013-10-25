@@ -8,6 +8,8 @@
  */
 #include "foe-cliques.hpp"
 
+double FoEUnarySigma = 20.0;
+
 double alpha[3] = {0.586612685392731, 1.157638405566669, 0.846059486257292};
 double expert[3][4] = {
 	{-0.0582774013402734, 0.0339010363051084, -0.0501593018104054, 0.0745568557931712},
@@ -31,13 +33,73 @@ REAL FoEEnergy::operator()(const unsigned char buf[]) const {
     return energy*DoubleToREAL;
 }
 
-double FoEUnaryEnergy::sigma = 20.0;
+double scales6[15] = {1.234098e-04, 9.118820e-04, 6.737947e-03, 1.831564e-02, 4.978707e-02, 1.353353e-01, 3.678794e-01, 1.000000e+00, 2.718282e+00, 7.389056e+00, 2.008554e+01, 5.459815e+01, 1.484132e+02, 1.096633e+03, 8.103084e+03};
+double weights6[8][15] = {
+    {4.966615e-06, 1.402633e-05, 4.253215e-05, 7.904638e-05, 1.612379e-04, 3.946805e-04, 1.451024e-03, 9.058828e-03, 2.753408e-03, 1.102737e-03, 8.047337e-04, 8.063605e-04, 9.539079e-04, 1.229528e-03, 9.091102e-03, },
+    {4.240440e-06, 1.173980e-05, 3.358483e-05, 5.846118e-05, 1.058051e-04, 2.052619e-04, 4.527641e-04, 1.304762e-03, 8.146331e-03, 2.037728e-02, 2.170268e-03, 7.884045e-04, 4.700676e-04, 4.608226e-04, 5.888791e-03, },
+    {6.112651e-06, 1.802328e-05, 6.245705e-05, 1.361957e-04, 3.835500e-04, 1.952572e-03, 3.397017e-03, 8.526675e-04, 5.316163e-04, 6.428227e-04, 1.244019e-03, 2.129145e-03, 2.082279e-03, 2.367889e-03, 7.186803e-03, },
+    {4.407710e-06, 1.293032e-05, 4.404933e-05, 9.390378e-05, 2.516647e-04, 1.202595e-03, 5.859766e-03, 8.151136e-04, 3.614644e-04, 3.069680e-04, 4.198347e-04, 8.744792e-04, 2.902308e-03, 1.909940e-03, 6.532963e-03, },
+    {2.123637e-06, 6.616319e-06, 2.743595e-05, 7.463329e-05, 3.359283e-04, 4.979288e-03, 6.145237e-04, 1.743128e-04, 9.572055e-05, 8.179948e-05, 1.056494e-04, 2.201675e-04, 1.116364e-03, 1.294207e-03, 4.042023e-03, },
+    {4.400463e-06, 1.220942e-05, 3.513740e-05, 6.152381e-05, 1.122689e-04, 2.195820e-04, 4.844656e-04, 1.361778e-03, 7.324177e-03, 2.081830e-02, 2.530626e-03, 8.944432e-04, 5.156746e-04, 4.730997e-04, 4.886599e-03, },
+    {4.133723e-06, 1.143147e-05, 3.259311e-05, 5.650677e-05, 1.014227e-04, 1.930672e-04, 4.067948e-04, 1.042201e-03, 4.310766e-03, 2.706232e-02, 3.436558e-03, 1.052983e-03, 5.599398e-04, 4.594866e-04, 3.988039e-03, },
+    {3.219118e-06, 9.612751e-06, 3.470275e-05, 7.967310e-05, 2.509392e-04, 2.131031e-03, 5.026091e-03, 4.936236e-04, 2.122872e-04, 1.641857e-04, 2.031121e-04, 4.095958e-04, 1.563764e-03, 1.232879e-03, 6.169218e-03, },
+};
+double experts6[8][6] = {
+    {-2.090142e-01, 2.097829e-01, 2.950161e-01, -2.472302e-01, -1.043714e-01, 5.581674e-02, },
+    {-1.488266e-04, -3.271458e-02, 3.356380e-02, 5.643963e-03, -1.838012e-02, 1.203577e-02, },
+    {-2.570765e-01, 2.476598e-01, 4.853564e-01, -4.925419e-01, -2.919637e-01, 3.085659e-01, },
+    {-8.555875e-02, 1.033068e-01, -1.910464e-01, 1.949756e-01, -1.111319e-01, 8.945463e-02, },
+    {-1.551654e-01, -9.819506e-02, 2.191230e-01, 2.300115e-01, -7.685911e-02, -1.189148e-01, },
+    {-1.280160e-02, 7.027325e-02, 5.866406e-02, -5.090950e-02, -8.894131e-02, 2.371509e-02, },
+    {3.217130e-02, -2.967191e-02, -3.334858e-03, -8.949966e-03, 4.184417e-02, -3.205874e-02, },
+    {-2.646344e-01, 2.607992e-01, 2.526141e-02, -4.170890e-02, 2.210081e-01, -2.007255e-01, },
+};
 
-REAL FoEUnaryEnergy::operator()(const unsigned char buf[]) const {
-        double dist = (double)_orig - (double)buf[0];
-        double e = dist*dist / (sigma*sigma * 2);
-        return DoubleToREAL * e;
+
+REAL FoE2x3Energy::operator()(const unsigned char buf[]) const {
+    double energy = 0.0;
+    if (_size != 6) {
+        throw "Wrong size for FoeEnergy";
+    }
+    for (int i = 0; i < 8; ++i) {
+        double dot = 0.0;
+        for (int j = 0; j < 6; ++j) {
+            dot += experts6[i][j] * buf[j];
+        }
+        dot = -0.5*dot*dot;
+        double sum = 0.0;
+        for (int j = 0; j < 15; ++j) {
+            sum += weights6[i][j] * exp(dot*scales6[j]);
+        }
+        energy -= log(sum);
+    }
+    return energy*DoubleToREAL;
 }
+
+void FoE2x3Energy::AddGradient(double grad[], const unsigned char image[]) const {
+    unsigned char values[6];
+    for (int i = 0; i < 6; ++i)
+        values[i] = image[_neighborhood[i]];
+    for (int i = 0; i < 8; ++i) {
+        double dot = 0.0;
+        for (int j = 0; j < 6; ++j) {
+            dot += experts6[i][j] * values[j];
+        }
+        double sum = 0.0;
+        double sum2 = 0.0;
+        for (int j = 0; j < 15; ++j) {
+            double summand = weights6[i][j] * exp(-0.5*dot*dot*scales6[j]);
+            sum += summand;
+            sum2 += summand*scales6[j];
+        }
+        sum2 /= sum;
+        for (int k = 0; k < 6; ++k) {
+            grad[_neighborhood[k]] += sum2*experts6[i][k]*dot;
+        }
+    }
+}
+
+
 
 double alpha9[8] = {1.201143e-01, 7.520515e-02, 9.078330e-02, 1.280545e-01, 6.276734e-02, 1.201840e-01, 1.092460e-01, 1.217102e-01};
 double expert9[8][8] = {
@@ -103,14 +165,6 @@ REAL FoE3x3Energy::operator()(const unsigned char buf[]) const {
     return energy*DoubleToREAL;
 }
 
-double FoE3x3UnaryEnergy::sigma = 20.0;
-
-REAL FoE3x3UnaryEnergy::operator()(const unsigned char buf[]) const {
-        double dist = (double)_orig - (double)buf[0];
-        double e = dist*dist / (sigma*sigma * 2);
-        return DoubleToREAL * e;
-}
-
 
 
 void FoEEnergy::AddGradient(double grad[], const unsigned char image[]) const {
@@ -127,10 +181,6 @@ void FoEEnergy::AddGradient(double grad[], const unsigned char image[]) const {
     }
 }
 
-void FoEUnaryEnergy::AddGradient(double grad[], const unsigned char image[]) const {
-    grad[_neighborhood[0]] += ((double)image[_neighborhood[0]] - (double)_orig) / (sigma * sigma);
-}
-
 void FoE3x3Energy::AddGradient(double grad[], const unsigned char image[]) const {
     unsigned char values[9];
     for (int i = 0; i < 9; ++i)
@@ -143,8 +193,4 @@ void FoE3x3Energy::AddGradient(double grad[], const unsigned char image[]) const
             grad[_neighborhood[i]] += alpha9[j] * filter9[j][i] * dot / (1 + 0.5 * dot * dot);
         }
     }
-}
-
-void FoE3x3UnaryEnergy::AddGradient(double grad[], const unsigned char image[]) const {
-    grad[_neighborhood[0]] += ((double)image[_neighborhood[0]] - (double)_orig) / (sigma * sigma);
 }

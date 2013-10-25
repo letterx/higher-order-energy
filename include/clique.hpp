@@ -123,7 +123,7 @@ class CliqueSystem {
          * Returns the total energy of the current labelling by summing
          * the results of the individual CliqueEnergy
          */
-        R Energy(const T* im) const;
+        double Energy(const T* im) const;
 
         /*
          * Returns a vector containing all the cliques in the CliqueSystem
@@ -144,8 +144,8 @@ void CliqueSystem<R, T, D>::AddClique(const CliquePointer& cp) {
 }
 
 template <typename R, typename T, int D>
-R CliqueSystem<R, T, D>::Energy(const T* im) const {
-    R energy = 0;
+double CliqueSystem<R, T, D>::Energy(const T* im) const {
+    double energy = 0;
     BOOST_FOREACH(const CliquePointer& cp, _cliques) {
         const CliqueEnergy<R, T, D>& c = *cp;
         T buf[c._size];

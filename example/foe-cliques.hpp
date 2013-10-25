@@ -13,6 +13,7 @@
 #include "clique.hpp"
 #include <math.h>
 #include <iostream>
+#include <cstdint>
 
 typedef int REAL;
 const double DoubleToREAL = 1000;
@@ -36,20 +37,35 @@ class FoEEnergy : public CliqueEnergy<REAL, unsigned char, 4> {
  * distance from the original observed value. Note that we've added a new data
  * member _orig, which keeps track of the originally observed value. 
  */
-class FoEUnaryEnergy : public CliqueEnergy<REAL, unsigned char, 4> {
+extern double FoEUnarySigma;
+template <int D>
+class FoEUnaryEnergy : public CliqueEnergy<REAL, unsigned char, D> {
     public:
         FoEUnaryEnergy(int *index, unsigned char originalImagePixel) 
-            : CliqueEnergy<REAL, unsigned char, 4>(1, index),
+            : CliqueEnergy<REAL, unsigned char, D>(1, index),
               _orig(originalImagePixel) { }
 
-        virtual REAL operator()(const unsigned char buf[]) const;
-        virtual void AddGradient(double grad[], const unsigned char image[]) const;
-        static double sigma;
+        virtual REAL operator()(const unsigned char buf[]) const {
+            double dist = (double)_orig - (double)buf[0];
+            double e = dist*dist / (FoEUnarySigma*FoEUnarySigma * 2);
+            return DoubleToREAL * e;
+        }
+        virtual void AddGradient(double grad[], const unsigned char image[]) const {
+            grad[this->_neighborhood[0]] += ((double)image[this->_neighborhood[0]] - (double)_orig) / (FoEUnarySigma * FoEUnarySigma);
+        }
 
     private:
         unsigned char _orig;
 };
 
+
+class FoE2x3Energy : public CliqueEnergy<REAL, unsigned char, 6> {
+    public:
+        FoE2x3Energy(int size, int nbd[])
+            : CliqueEnergy<REAL, unsigned char, 6>(size, nbd) { }
+        virtual REAL operator()(const unsigned char buf[]) const;
+        virtual void AddGradient(double grad[], const unsigned char image[]) const;
+};
 
 class FoE3x3Energy : public CliqueEnergy<REAL, unsigned char, 9> {
     public:
@@ -59,19 +75,5 @@ class FoE3x3Energy : public CliqueEnergy<REAL, unsigned char, 9> {
         virtual void AddGradient(double grad[], const unsigned char image[]) const;
 
         static void InitFoE3x3();
-};
-
-class FoE3x3UnaryEnergy : public CliqueEnergy<REAL, unsigned char, 9> {
-    public:
-        FoE3x3UnaryEnergy(int *index, unsigned char originalImagePixel) 
-            : CliqueEnergy<REAL, unsigned char, 9>(1, index),
-              _orig(originalImagePixel) { }
-
-        virtual REAL operator()(const unsigned char buf[]) const;
-        virtual void AddGradient(double grad[], const unsigned char image[]) const;
-        static double sigma;
-
-    private:
-        unsigned char _orig;
 };
 #endif

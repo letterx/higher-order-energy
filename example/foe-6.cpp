@@ -24,11 +24,11 @@
 double sigma = 20.0;
 int kernelRadius;
 std::vector<double> gaussianKernel;
-REAL threshold = 100.0 * DoubleToREAL;
+double threshold = 100.0;
 int thresholdIters = 20;
 
-int width = 0;
-int height = 0;
+int width;
+int height;
 
 // Set up the RNGs
 static boost::mt19937 rng;
@@ -39,8 +39,8 @@ static boost::variate_generator<boost::mt19937&, boost::uniform_int<> > noise3si
 
 
 Image_uc GetProposedImage(const Image_uc& im, unsigned int iteration, Image_uc& blur);
-Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, CliqueSystem<REAL, unsigned char, 4> &cs, double eta);
-CliqueSystem<REAL, unsigned char, 4> SetupCliques(const Image_uc& im);
+Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, CliqueSystem<REAL, unsigned char, 6> &cs, double eta);
+CliqueSystem<REAL, unsigned char, 6> SetupCliques(const Image_uc& im);
 void InitGaussKernel(double sigma, int& radius, std::vector<double>& kernel);
 Image_uc ApplyGaussBlur(const Image_uc& im, int radius, const std::vector<double>& kernel);
 double getPSNR(const Image_uc& d, const Image_uc& o);
@@ -72,21 +72,17 @@ int main(int argc, char **argv) {
         ("original,o", po::value<std::string>(&original_name)->default_value(""), "Filename for original image -- for computing PSNR")
         ("grad,g", po::value<bool>(&grad_descent)->default_value(false), "Flag for using gradient descent proposals")
         ("eta", po::value<double>(&eta)->default_value(60.0), "Scale for gradient descent proposals")
-        ("sigma", po::value<double>(&FoEUnarySigma)->default_value(20.0), "Sigma for unary costs")
+        ("thresh", po::value<double>(&threshold)->default_value(100.0), "Threshold to stop optimization")
+        ("sigma", po::value<double>(&FoEUnarySigma)->default_value(20.0), "Sigma value for unaries")
     ;
     po::positional_options_description popts;
     popts.add("image", 1);
 
     po::variables_map vm;
-    try {
-        po::store(po::command_line_parser(argc, argv).
-                options(desc).positional(popts).run(), vm);
-        
-        if (vm.count("help")) {
-            std::cout << desc;
-            exit(0);
-        }
+    po::store(po::command_line_parser(argc, argv).
+            options(desc).positional(popts).run(), vm);
 
+    try {
         po::notify(vm);
         if (param_methods.empty()) {
             methods.push_back(OptType::Fix);
@@ -102,8 +98,8 @@ int main(int argc, char **argv) {
                     methods.push_back(OptType::Fix);
                 } else if (m == std::string("pc")) {
                     methods.push_back(OptType::PC);
-                } else if (m == std::string("pc-grid")) {
-                    methods.push_back(OptType::PC_Grid);
+                } else if (m == std::string("grad")) {
+                    methods.push_back(OptType::Grad);
                 } else {
                     std::cout << "Unrecognized method type: " << m << "\n";
                     exit(-1);
@@ -134,11 +130,11 @@ int main(int argc, char **argv) {
 
     // Set up the clique system, which defines the energy to be minimized
     // by fusion move
-    CliqueSystem<REAL, unsigned char, 4> cliques = SetupCliques(in);
+    CliqueSystem<REAL, unsigned char, 6> cliques = SetupCliques(in);
 
     // energies keeps track of last [thresholdIters] energy values to know
     // when we reach convergence
-    REAL energies[thresholdIters];
+    double energies[thresholdIters];
 
     std::map<OptType, std::vector<FusionStats>> allStats;
 
@@ -154,10 +150,16 @@ int main(int argc, char **argv) {
         std::chrono::system_clock::time_point startTime = std::chrono::system_clock::now();
         for (int i = 0; i < iterations; ++i) {
             std::cout << "Iteration " << i+1 << "\t\t";
+            if (i % 10 == 9) {
+                std::string tmpname = std::string("tmp+") + std::to_string(i+1) + ".pgm";
+                ImageToFile(current, tmpname.c_str());
+            }
+
+
             FusionStats stats;
             stats.iter = i;
 
-            REAL energy  = cliques.Energy(current.Data()); 
+            double energy  = cliques.Energy(current.Data()); 
             stats.initialEnergy = energy;
             // check if we've reached convergence
             if (i > thresholdIters 
@@ -166,7 +168,7 @@ int main(int argc, char **argv) {
             }
             // Do some statistic gathering
             energies[i%thresholdIters] = energy;
-            std::cout << "Current Energy: " << energy << "\n";
+            std::cout << "Current Energy: " << energy << std::endl;
 
             // Real work here: get proposed image, then fuse it with current image
             Image_uc proposed;
@@ -178,11 +180,11 @@ int main(int argc, char **argv) {
             if (lockstep) {
                 std::vector<Image_uc> outputs;
                 for (OptType lockstep_ot : methods) {
-                    printf("\t%10s...\t", ToString(lockstep_ot).c_str());
+                    std::cout << "\t" << ToString(lockstep_ot) << "...\t";
                     std::cout.flush();
                     Image_uc tmp(current.Height(), current.Width());
                     FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), tmp.Data(), cliques, lockstep_ot);
-                    REAL e = cliques.Energy(tmp.Data()); 
+                    double e = cliques.Energy(tmp.Data()); 
                     std::cout << e << "\n";
 
                     stats.finalEnergy = e;
@@ -207,7 +209,7 @@ int main(int argc, char **argv) {
         std::string optMethod = ToString(ot);
         outfilename = basename + "-" + optMethod + ".pgm";
         ImageToFile(current, outfilename.c_str());
-        REAL energy  = cliques.Energy(current.Data());
+        double energy  = cliques.Energy(current.Data());
         std::cout << "Final Energy: " << energy << std::endl;
     }
 
@@ -223,8 +225,8 @@ int main(int argc, char **argv) {
             statsFile << s.swaps << " ";
             statsFile << s.time << " ";
             statsFile << s.cumulativeTime << " ";
-            statsFile << double(s.initialEnergy) / DoubleToREAL  << " ";
-            statsFile << double(s.finalEnergy) / DoubleToREAL << " ";
+            statsFile << double(s.initialEnergy)  << " ";
+            statsFile << double(s.finalEnergy) << " ";
             statsFile << s.psnr << " ";
             statsFile << "\n";
         }
@@ -259,7 +261,7 @@ Image_uc GetProposedImage(const Image_uc& im, unsigned int iteration, Image_uc& 
     return proposed;
 }
 
-Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, CliqueSystem<REAL, unsigned char, 4> &cs, double eta) {
+Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, CliqueSystem<REAL, unsigned char, 6> &cs, double eta) {
     int size = im.Height() * im.Width();
     boost::shared_array<double> grad(new double[size]);
     for (int i = 0; i < size; ++i)
@@ -268,31 +270,32 @@ Image_uc GetProposedImageGrad(const Image_uc& im, unsigned int iteration, Clique
         cp->AddGradient(grad.get(), im.Data());
     Image_uc proposed(im.Height(), im.Width());
     for (int i = 0; i < size; ++i) {
-        double value = ((double)im.At(i) - grad[i] * eta*7/(7 + iteration));
+        double value = ((double)im.At(i) - grad[i] * eta*20/(20+iteration));
         if (value < 0)
             value = 0;
         if (value > 255)
             value = 255;
-        proposed.At(i) = (unsigned char) value;
+        proposed.At(i) = (unsigned char) round(value);
         //proposed.At(i) = (unsigned char)(double)im.At(i);
-    }    
+    }
     return proposed;
 }
 
-CliqueSystem<REAL, unsigned char, 4> SetupCliques(const Image_uc& im) {
-    CliqueSystem<REAL, unsigned char, 4> cs;
+CliqueSystem<REAL, unsigned char, 6> SetupCliques(const Image_uc& im) {
+    CliqueSystem<REAL, unsigned char, 6> cs;
     height = im.Height();
     width = im.Width();
-    // For each 2x2 patch, add in a Field of Experts clique
-    for (int i = 0; i < height - 1; ++i) {
+    // For each 2x3 patch, add in a Field of Experts clique
+    for (int i = 0; i < height - 2; ++i) {
         for (int j = 0; j < width - 1; ++j) {
-            int buf[4];
+            int buf[6];
             int bufIdx = 0;
-            buf[bufIdx++] = i*width + j;
-            buf[bufIdx++] = (i+1)*width + j;
-            buf[bufIdx++] = i*width + j+1;
-            buf[bufIdx++] = (i+1)*width + j+1;
-            cs.AddClique(CliqueSystem<REAL, unsigned char, 4>::CliquePointer(new FoEEnergy(4, buf)));
+            for (int k = 0; k < 3; ++k) {
+                for (int l = 0; l < 2; ++l) {
+                    buf[bufIdx++] = (i+k)*width + j+l;
+                }
+            }
+            cs.AddClique(CliqueSystem<REAL, unsigned char, 6>::CliquePointer(new FoE2x3Energy(6, buf)));
         }
     }
     // Add the unary terms
@@ -300,7 +303,7 @@ CliqueSystem<REAL, unsigned char, 4> SetupCliques(const Image_uc& im) {
         for (int j = 0; j < width; ++j) {
             int buf[1];
             buf[0] = i*width + j;
-            cs.AddClique(CliqueSystem<REAL, unsigned char, 4>::CliquePointer(new FoEUnaryEnergy<4>(buf, im(i, j))));
+            cs.AddClique(CliqueSystem<REAL, unsigned char, 6>::CliquePointer(new FoEUnaryEnergy<6>(buf, im(i, j))));
         }
     }
     return cs;

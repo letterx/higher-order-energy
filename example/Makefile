@@ -27,7 +27,7 @@ LIBPETTER = ../grd/obj/submodular/libpetter.a
 TARGET = higher-order-example
 
 .PHONY: all
-all: $(TARGET) foe-9 test-pairwise
+all: $(TARGET) foe-9 foe-6 test-pairwise
 
 $(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
@@ -40,6 +40,10 @@ test-pairwise: test-pairwise.o $(QPBO_OBJS) $(LIBPETTER)
 foe-9: foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
+
+foe-6: foe-6.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
+	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
+	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ foe-6.o image.o foe-cliques.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
 
 $(LIBPETTER): $(QPBO_OBJS)
 	cd ../grd; $(MAKE)

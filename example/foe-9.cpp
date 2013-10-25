@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
         ("grad,g", po::value<bool>(&grad_descent)->default_value(false), "Flag for using gradient descent proposals")
         ("eta", po::value<double>(&eta)->default_value(60.0), "Scale for gradient descent proposals")
         ("thresh", po::value<double>(&threshold)->default_value(100.0), "Threshold to stop optimization")
-        ("sigma", po::value<double>(&FoEUnaryEnergy::sigma)->default_value(20.0), "Sigma value for unaries")
+        ("sigma", po::value<double>(&FoEUnarySigma)->default_value(20.0), "Sigma value for unaries")
     ;
     po::positional_options_description popts;
     popts.add("image", 1);
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
 
     // energies keeps track of last [thresholdIters] energy values to know
     // when we reach convergence
-    REAL energies[thresholdIters];
+    double energies[thresholdIters];
 
     std::map<OptType, std::vector<FusionStats>> allStats;
 
@@ -159,16 +159,16 @@ int main(int argc, char **argv) {
             FusionStats stats;
             stats.iter = i;
 
-            REAL energy  = cliques.Energy(current.Data()); 
+            double energy  = cliques.Energy(current.Data()); 
             stats.initialEnergy = energy;
             // check if we've reached convergence
             if (i > thresholdIters 
-                    && energies[i%thresholdIters] - energy < threshold*DoubleToREAL) {
+                    && energies[i%thresholdIters] - energy < threshold) {
                 break;
             }
             // Do some statistic gathering
             energies[i%thresholdIters] = energy;
-            std::cout << "Current Energy: " << (double)energy / DoubleToREAL << std::endl;
+            std::cout << "Current Energy: " << (double)energy << std::endl;
 
             // Real work here: get proposed image, then fuse it with current image
             Image_uc proposed;
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
                     std::cout.flush();
                     Image_uc tmp(current.Height(), current.Width());
                     FusionMove(stats, current.Height()*current.Width(), proposed.Data(), current.Data(), tmp.Data(), cliques, lockstep_ot);
-                    REAL e = cliques.Energy(tmp.Data()); 
+                    double e = cliques.Energy(tmp.Data()); 
                     std::cout << e << "\n";
 
                     stats.finalEnergy = e;
@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
         std::string optMethod = ToString(ot);
         outfilename = basename + "-" + optMethod + ".pgm";
         ImageToFile(current, outfilename.c_str());
-        REAL energy  = cliques.Energy(current.Data());
+        double energy  = cliques.Energy(current.Data());
         std::cout << "Final Energy: " << energy << std::endl;
     }
 
@@ -225,8 +225,8 @@ int main(int argc, char **argv) {
             statsFile << s.swaps << " ";
             statsFile << s.time << " ";
             statsFile << s.cumulativeTime << " ";
-            statsFile << double(s.initialEnergy) / DoubleToREAL  << " ";
-            statsFile << double(s.finalEnergy) / DoubleToREAL << " ";
+            statsFile << double(s.initialEnergy)  << " ";
+            statsFile << double(s.finalEnergy)  << " ";
             statsFile << s.psnr << " ";
             statsFile << "\n";
         }
@@ -304,7 +304,7 @@ CliqueSystem<REAL, unsigned char, 9> SetupCliques(const Image_uc& im) {
         for (int j = 0; j < width; ++j) {
             int buf[1];
             buf[0] = i*width + j;
-            cs.AddClique(CliqueSystem<REAL, unsigned char, 9>::CliquePointer(new FoE3x3UnaryEnergy(buf, im(i, j))));
+            cs.AddClique(CliqueSystem<REAL, unsigned char, 9>::CliquePointer(new FoEUnaryEnergy<9>(buf, im(i, j))));
         }
     }
     return cs;

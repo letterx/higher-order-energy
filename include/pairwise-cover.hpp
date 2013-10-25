@@ -457,9 +457,11 @@ template <typename R, int D>
 template <typename QR>
 inline void PairwiseCover<R, D>::FixLabels(QR& qr) {
     NodeId node_base = _varCounter;
+    /*
     for (const Clique& c : _cliques) {
-        //FixClique(*this, c, qr, node_base);
+        FixClique(*this, c, qr, node_base);
     }
+    */
     //std::cout << "Auxilliary labels: " << aux_labels << "\n";
     //std::cout << "Auxilliary swaps: " << one_labels << "\n";
     //std::cout << "After Energy:  " << ComputeEnergy(qr) << "\n";
