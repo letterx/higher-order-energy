@@ -96,8 +96,12 @@ int main(int argc, char **argv) {
                     methods.push_back(OptType::GRD_Heur);
                 } else if (m == std::string("fix")) {
                     methods.push_back(OptType::Fix);
+                } else if (m == std::string("fix-i")) {
+                    methods.push_back(OptType::Fix_I);
                 } else if (m == std::string("pc")) {
                     methods.push_back(OptType::PC);
+                } else if (m == std::string("pc-i")) {
+                    methods.push_back(OptType::PC_I);
                 } else if (m == std::string("grad")) {
                     methods.push_back(OptType::Grad);
                 } else {

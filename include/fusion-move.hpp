@@ -121,6 +121,27 @@ void GetFusedImage(size_t size,
         RandomAccessIterator out, 
         QuadraticRep& qr);
 
+template <typename QuadraticRep>
+void FusionImprove(QuadraticRep& qr) {
+    auto energy = qr.ComputeTwiceEnergy();
+    int n = qr.GetNodeNum();
+    // Set unlabeled to 1, see if it's better energy
+    for (int i = 0; i < n; ++i)
+        if (qr.GetLabel(i) < 0)
+            qr.SetLabel(i, 1);
+    auto new_energy = qr.ComputeTwiceEnergy(1);
+    /*
+    // For Stereo, ComputeTwiceEnergy overflows, so gives wrong answers
+    // Just assume that 1 is the better labeling, and run improve
+    if (new_energy > energy)
+        for (int i = 0; i < n; ++i)
+            if (qr.GetLabel(i) < 0)
+                qr.SetLabel(i, 1);
+    */
+    std::cout << "Improving...\n";
+    qr.Improve();
+}
+
 extern int width;
 extern int height;
 
@@ -143,22 +164,24 @@ void FusionMove(FusionStats& stats,
         OptType optType) 
 {
     std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
-    if (optType == OptType::Fix) {
+    if (optType == OptType::Fix || optType == OptType::Fix_I) {
         HigherOrderEnergy<Energy, D> hoe;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
         hoe.ToQuadratic(qr);
         qr.Solve();
         qr.ComputeWeakPersistencies();
-        qr.Improve();
+        if (optType == OptType::Fix_I)
+            FusionImprove(qr);
         GetFusedImage(stats, size, current, proposed, out, qr);
-    } else if (optType == OptType::PC) {
+    } else if (optType == OptType::PC || optType == OptType::PC_I) {
         PairwiseCover<Energy, D> hoe;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
         hoe.ToQuadratic(qr);
         qr.MergeParallelEdges();
         qr.Solve();
         qr.ComputeWeakPersistencies();
-        qr.Improve();
+        if (optType == OptType::PC_I)
+            FusionImprove(qr);
         hoe.FixLabels(qr);
         GetFusedImage(stats, size, current, proposed, out, qr);
     } else if (optType == OptType::PC_Grid) {

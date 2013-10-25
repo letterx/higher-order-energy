@@ -10,10 +10,12 @@
 
 enum class OptType {
     Fix,
+    Fix_I, // FGBZ with QPBOI
     HOCR,
     GRD,
     GRD_Heur,
     PC,
+    PC_I, // PairwiseCover with QPBOI
     PC_Grid,
     Grad
 };
@@ -21,10 +23,12 @@ enum class OptType {
 inline std::string ToString(OptType ot) {
     switch (ot) {
         case OptType::Fix: return "fix";
+        case OptType::Fix_I: return "fix-i";
         case OptType::HOCR: return "hocr";
         case OptType::GRD: return "grd";
         case OptType::GRD_Heur: return "grd-heur";
         case OptType::PC: return "pc";
+        case OptType::PC_I: return "pc-i";
         case OptType::PC_Grid: return "pc-grid";
         case OptType::Grad: return "grad";
         default: return "unknown";
