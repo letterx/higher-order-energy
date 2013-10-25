@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
             if (lockstep) {
                 std::vector<Image_uc> outputs;
                 for (OptType lockstep_ot : methods) {
-                    std::cout << "\t" << ToString(lockstep_ot) << "...\t";
+                    printf("\t%10s...\t", ToString(lockstep_ot).c_str());
                     std::cout.flush();
                     Image_uc tmp(current.Height(), current.Width());
                     FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), tmp.Data(), cliques, lockstep_ot);
