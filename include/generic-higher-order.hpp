@@ -17,6 +17,7 @@ enum class OptType {
     PC,
     PC_I, // PairwiseCover with QPBOI
     PC_Grid,
+    PC_Grid_I,
     Grad
 };
 
@@ -30,6 +31,7 @@ inline std::string ToString(OptType ot) {
         case OptType::PC: return "pc";
         case OptType::PC_I: return "pc-i";
         case OptType::PC_Grid: return "pc-grid";
+        case OptType::PC_Grid_I: return "pc-grid-i";
         case OptType::Grad: return "grad";
         default: return "unknown";
     }

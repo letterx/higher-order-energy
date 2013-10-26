@@ -102,6 +102,10 @@ int main(int argc, char **argv) {
                     methods.push_back(OptType::PC);
                 } else if (m == std::string("pc-i")) {
                     methods.push_back(OptType::PC_I);
+                } else if (m == std::string("pc-grid")) {
+                    methods.push_back(OptType::PC_Grid);
+                } else if (m == std::string("pc-grid-i")) {
+                    methods.push_back(OptType::PC_Grid_I);
                 } else if (m == std::string("grad")) {
                     methods.push_back(OptType::Grad);
                 } else {
