@@ -181,16 +181,17 @@ int main(int argc, char **argv) {
                     printf("\t%10s...\t", ToString(lockstep_ot).c_str());
                     std::cout.flush();
                     Image_uc tmp(current.Height(), current.Width());
-                    FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), tmp.Data(), cliques, lockstep_ot);
+                    FusionStats methodStats = stats;
+                    FusionMove(methodStats, current.Height()*current.Width(), current.Data(), proposed.Data(), tmp.Data(), cliques, lockstep_ot);
                     REAL e = cliques.Energy(tmp.Data()); 
                     std::cout << e << "\n";
 
-                    stats.finalEnergy = e;
+                    methodStats.finalEnergy = e;
                     if (computePSNR)
-                        stats.psnr = getPSNR(tmp, original);
+                        methodStats.psnr = getPSNR(tmp, original);
                     std::chrono::duration<double> cumulativeTime = (std::chrono::system_clock::now() - startTime);
-                    stats.cumulativeTime = cumulativeTime.count();
-                    allStats[lockstep_ot].push_back(stats);
+                    methodStats.cumulativeTime = cumulativeTime.count();
+                    allStats[lockstep_ot].push_back(methodStats);
                     outputs.push_back(tmp);
                 }
                 current.Copy(outputs[0]);

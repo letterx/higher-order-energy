@@ -183,21 +183,22 @@ int main(int argc, char **argv) {
                     std::cout << "\t" << ToString(lockstep_ot) << "...\t";
                     std::cout.flush();
                     Image_uc tmp(current.Height(), current.Width());
-                    FusionMove(stats, current.Height()*current.Width(), proposed.Data(), current.Data(), tmp.Data(), cliques, lockstep_ot);
+                    FusionStats method_stats = stats;
+                    FusionMove(method_stats, current.Height()*current.Width(), current.Data(), proposed.Data(), tmp.Data(), cliques, lockstep_ot);
                     double e = cliques.Energy(tmp.Data()); 
                     std::cout << e << "\n";
 
-                    stats.finalEnergy = e;
+                    method_stats.finalEnergy = e;
                     if (computePSNR)
-                        stats.psnr = getPSNR(tmp, original);
+                        method_stats.psnr = getPSNR(tmp, original);
                     std::chrono::duration<double> cumulativeTime = (std::chrono::system_clock::now() - startTime);
-                    stats.cumulativeTime = cumulativeTime.count();
-                    allStats[lockstep_ot].push_back(stats);
+                    method_stats.cumulativeTime = cumulativeTime.count();
+                    allStats[lockstep_ot].push_back(method_stats);
                     outputs.push_back(tmp);
                 }
                 current.Copy(outputs[0]);
             } else {
-                FusionMove(stats, current.Height()*current.Width(), proposed.Data(), current.Data(), current.Data(), cliques, ot);
+                FusionMove(stats, current.Height()*current.Width(), current.Data(), proposed.Data(), current.Data(), cliques, ot);
                 stats.finalEnergy = cliques.Energy(current.Data());
                 if (computePSNR)
                     stats.psnr = getPSNR(current, original);
