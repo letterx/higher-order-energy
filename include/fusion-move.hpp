@@ -123,13 +123,13 @@ void GetFusedImage(size_t size,
 
 template <typename QuadraticRep>
 void FusionImprove(QuadraticRep& qr) {
-    auto energy = qr.ComputeTwiceEnergy();
+    //auto energy = qr.ComputeTwiceEnergy();
     int n = qr.GetNodeNum();
     // Set unlabeled to 1, see if it's better energy
     for (int i = 0; i < n; ++i)
         if (qr.GetLabel(i) < 0)
             qr.SetLabel(i, 1);
-    auto new_energy = qr.ComputeTwiceEnergy(1);
+    //auto new_energy = qr.ComputeTwiceEnergy(1);
     /*
     // For Stereo, ComputeTwiceEnergy overflows, so gives wrong answers
     // Just assume that 1 is the better labeling, and run improve
