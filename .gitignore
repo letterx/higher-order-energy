@@ -23,6 +23,7 @@ grd/bin
 foe-9
 foe-6
 test-pairwise
+random-graph
 
 # Experiment files
 *.pgm

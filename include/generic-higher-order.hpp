@@ -110,5 +110,16 @@ void AddClique(Petter::PseudoBoolean<PB_REAL>& opt, int d, const REAL* coeffs, c
     }
 }
 
+template <typename Opt, typename QR>
+void ToQuadratic(Opt& opt, QR& qr) {
+    opt.ToQuadratic(qr);
+}
+
+template <typename REAL, int D, typename QR>
+void ToQuadratic(PBF<REAL, D>& opt, QR& qr) {
+    PBF<REAL, 2> tmp_qr;
+    opt.toQuadratic(tmp_qr);
+    convert(qr, tmp_qr);
+}
 
 #endif
