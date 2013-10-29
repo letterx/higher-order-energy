@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
         ("method,m", po::value<std::string>(&params.method)->required(), "Method to use for higher-order reduction")
         ("grid,g", "Set if graph should be a grid")
         ("size,n", po::value<int>(&params.size)->required(), "Number of variables (nongrid) or length of grid (grid)")
-        ("cliques", po::value<int>(&params.num_cliques)->default_value(0), "Number of cliques (nongrid only)")
+        ("cliques", po::value<int>(&params.num_cliques)->default_value(-1), "Number of cliques (nongrid only)")
         ("cw", po::value<int>(&params.clique_width)->default_value(2), "Width of cliques")
         ("ch", po::value<int>(&params.clique_height)->default_value(2), "Height of cliques")
         ("unary,u", po::value<int>(&params.unary_range)->default_value(1000), "Strength of unary terms")
@@ -81,10 +81,11 @@ int main(int argc, char **argv) {
         }
         if (vm.count("grid"))
             params.grid = true;
-        if (params.num_cliques < 0)
-            params.num_cliques = params.size;
 
         po::notify(vm);
+
+        if (params.num_cliques <= 0)
+            params.num_cliques = params.size;
     } catch (std::exception& e) {
         std::cout << "Parsing error: " << e.what() << "\n";
         std::cout << "Usage: random-graph -m <method> -n <size> [options]\n";
@@ -183,12 +184,10 @@ int main(int argc, char **argv) {
 class DummyOpt {
     public:
         struct DummyClique {
-            int d;
             std::vector<int> vars;
             std::vector<int> coeffs;
             DummyClique(const std::vector<int> vars_, const std::vector<int> coeffs_)
-                : d(vars.size()),
-                vars(vars_),
+                : vars(vars_),
                 coeffs(coeffs_) { }
         };
 
@@ -205,7 +204,7 @@ class DummyOpt {
             }
             for (const DummyClique& c : m_cliques) {
                 uint32_t assgn = 0;
-                for (int i = 0; i < c.d; ++i)
+                for (int i = 0; i < c.vars.size(); ++i)
                     if (labels[c.vars[i]] == 1)
                         assgn |= (1 << i);
                 e += c.coeffs[assgn];
