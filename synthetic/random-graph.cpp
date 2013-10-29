@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
         std::cout << desc;
         exit(-1);
     }
-
+    std::cout<<"HERE"<<std::endl;
     if (params.method == std::string("fix")) {
         switch (params.clique_width*params.clique_height) {
             // Why did I have to make clique size compile time dependent??!?!
