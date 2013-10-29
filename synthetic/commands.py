@@ -1,11 +1,14 @@
 import subprocess
 import matplotlib.pyplot as plt
 
-# setup constants
+## setup constants
+# different methods
 allm = ['hocr', 'fix', 'pc']
+# colors for each method
 colors = ['b^', 'rs', 'go']
 cw = 2
 ch = 2
+# range of n
 alln = range(20, 400, 10)
 unary = 10000000
 cmd_template = './random-graph -m %s -n %d -g --unary %d --cw %d --ch %d'
@@ -43,6 +46,7 @@ for m in allm:
         if n % 100 == 0:
             print n
 
+# Data for y-axis on the graph 
 data = labeled
 print data
 for i in range(3):
@@ -50,6 +54,7 @@ for i in range(3):
 plt.legend(allm, loc = 'upper left')
 plt.axis([alln[0] - 10, alln[-1] + 10, 0, 1])
 plt.autoscale(enable=True, axis='y')
+# Change for different data
 plt.title('Labeled')
 plt.ylabel('Labeled nodes')
 plt.xlabel('Grid edge length')
