@@ -229,7 +229,7 @@ void RandomSolve(Opt& opt, const Params& params) {
     } else {
         size = params.size;
         SetupRandomInstance(opt, params.seed, params.size, 
-                params.num_cliques, params.clique_width,
+                params.num_cliques, params.clique_width*params.clique_height,
                 params.unary_range, params.term_range);
     }
     QPBO<int> qr(0,0);
