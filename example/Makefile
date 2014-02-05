@@ -4,10 +4,10 @@ CLPLIBDIR = ~/src/coin-Clp/lib/
 
 CXX ?= g++
 DEFS =
-INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR) -I../hocr -I../grd/source/library/
+INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR) -I../hocr -I../grd/source/library/ -I${GUROBI_HOME}/include
 OPT ?= -O3
 CXX_FLAGS = $(OPT) -Wall --std=c++11 $(INCLUDES) $(DEFS)
-LD_FLAGS = -L../grd/obj/submodular/ -L $(CLPLIBDIR)
+LD_FLAGS = -L../grd/obj/submodular/ -L $(CLPLIBDIR) -L${GUROBI_HOME}/lib
 LIBS = -lboost_program_options -lpetter -lClp -lCoinUtils -llapack
 
 EXAMPLE_SRCS = higher-order-example.cpp \
@@ -27,7 +27,7 @@ LIBPETTER = ../grd/obj/submodular/libpetter.a
 TARGET = higher-order-example
 
 .PHONY: all
-all: $(TARGET) foe-9 foe-6 test-pairwise
+all: $(TARGET) foe-9 foe-6 test-pairwise count-attractive-partition
 
 $(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
@@ -44,6 +44,9 @@ foe-9: foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
 foe-6: foe-6.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ foe-6.o image.o foe-cliques.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
+
+count-attractive-partition: count-attractive-partition.o
+	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ count-attractive-partition.o -lgurobi56 -lgurobi_c++
 
 $(LIBPETTER): $(QPBO_OBJS)
 	cd ../grd; $(MAKE)

@@ -24,6 +24,7 @@ foe-9
 foe-6
 test-pairwise
 random-graph
+count-attractive-partition
 
 # Experiment files
 *.pgm
