@@ -18,7 +18,7 @@ EXAMPLE_OBJS = $(EXAMPLE_SRCS:.cpp=.o)
 QPBO_SRCS = $(QPBO_DIR)/QPBO.cpp
 QPBO_OBJS = $(QPBO_SRCS:.cpp=.o)
 
-MAXFLOW_OBJS = ../grd/obj/submodular/graph.o ../grd/obj/submodular/maxflow.o
+MAXFLOW_OBJS = ../grd/obj/submodular/maxflow.o
 
 SRCS = $(EXAMPLE_SRCS) $(QPBO_SRCS) foe-9.cpp test-pairwise.cpp
 
@@ -49,7 +49,7 @@ count-attractive-partition: count-attractive-partition.o
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ count-attractive-partition.o -lgurobi56 -lgurobi_c++
 
 $(LIBPETTER): $(QPBO_OBJS)
-	cd ../grd; $(MAKE)
+	cd ../grd; $(MAKE) obj/submodular/libpetter.a obj/submodular/maxflow.o
 
 %.o: %.cpp
 	$(CXX) $(CXX_FLAGS) -MMD -o $@ -c $<
@@ -71,4 +71,4 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	rm -f $(TARGET)
+	rm -f $(TARGET) foe-9 foe-6 count-attractive-partition

@@ -258,4 +258,3 @@ namespace Petter
 
 } //namespace Petter
 
-#include "pb_instances.inc"

@@ -1,8 +1,8 @@
 # Petter Strandmark 2011
 
 # You might have to change these to g++-4.5 or something similar if you have several versions installed
-COMPILER = g++ -c
-LINKER = g++
+COMPILER = ${CXX} -c
+LINKER = ${CXX}
 
 # Temporary directory to store object files; needs to exist
 OBJDIR = ./obj/submodular/
@@ -16,9 +16,9 @@ TARGET  = bin/submodular
 
 ##################################################################################
 
-SUBMOBJ = $(OBJDIR)PseudoBoolean.o $(OBJDIR)PseudoBoolean_create_g.o $(OBJDIR)PseudoBoolean_heuristic.o $(OBJDIR)PseudoBoolean_minimize.o $(OBJDIR)PseudoBoolean_minimize_lp.o $(OBJDIR)PseudoBoolean_minimize_reduction.o $(OBJDIR)PseudoBoolean_reduce.o $(OBJDIR)PseudoBoolean_complete.o $(OBJDIR)PseudoBoolean_branchandbound.o $(OBJDIR)GeneratorPseudoBoolean.o $(OBJDIR)VertexPacking.o
+SUBMOBJ = $(OBJDIR)PseudoBoolean.o $(OBJDIR)PseudoBoolean_branchandbound.o $(OBJDIR)VertexPacking.o
 QPBOOBJ = ../qpbo/QPBO.o 
-MAXFLOWOBJ = $(OBJDIR)graph.o $(OBJDIR)maxflow.o
+MAXFLOWOBJ = $(OBJDIR)maxflow.o
 LIBDIR = $(OBJDIR)
 INCLUDE = -I source/library -I thirdparty/Petter -I thirdparty/HOCR -I ../qpbo -I thirdparty/maxflow-v3.01.src -I thirdparty/ibfs
 OPTIONS = -std=c++0x -O3

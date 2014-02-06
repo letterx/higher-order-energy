@@ -970,4 +970,12 @@ namespace Petter
 }
 
 
+#include "GeneratorPseudoBoolean.cpp"
+#include "PseudoBoolean_complete.cpp"
+#include "PseudoBoolean_create_g.cpp"
+#include "PseudoBoolean_heuristic.cpp"
+#include "PseudoBoolean_minimize.cpp"
+#include "PseudoBoolean_minimize_lp.cpp"
+#include "PseudoBoolean_minimize_reduction.cpp"
+#include "PseudoBoolean_reduce.cpp"
 #include "pb_instances.inc"

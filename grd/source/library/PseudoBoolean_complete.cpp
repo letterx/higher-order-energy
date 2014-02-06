@@ -205,5 +205,3 @@ namespace Petter
 		return bound;
 	}
 }
-
-#include "pb_instances.inc"

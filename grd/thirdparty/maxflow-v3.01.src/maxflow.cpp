@@ -681,4 +681,5 @@ template <typename captype, typename tcaptype, typename flowtype>
 	}
 }
 
+#include "graph.cpp"
 #include "instances.inc"
