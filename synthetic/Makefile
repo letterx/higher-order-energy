@@ -16,7 +16,7 @@ MAIN_OBJS = $(MAIN_SRCS:.cpp=.o)
 QPBO_SRCS = $(QPBO_DIR)/QPBO.cpp
 QPBO_OBJS = $(QPBO_SRCS:.cpp=.o)
 
-MAXFLOW_OBJS = ../grd/obj/submodular/graph.o ../grd/obj/submodular/maxflow.o
+MAXFLOW_OBJS = ../grd/obj/submodular/maxflow.o
 
 SRCS = $(MAIN_SRCS) $(QPBO_SRCS)
 
