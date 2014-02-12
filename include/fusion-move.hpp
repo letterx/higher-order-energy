@@ -252,6 +252,8 @@ void FusionMove(FusionStats& stats,
             out[i] = proposed[i];
         }
         stats.labeled = stats.swaps = size;
+    } else if (optType == OptType::Y_Linear) {
+        // TODO(irwinherrmann)
     }
     std::chrono::duration<double> time = std::chrono::system_clock::now() - start;
     stats.time = time.count();
