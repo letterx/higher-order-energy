@@ -1231,4 +1231,3 @@ template <typename REAL>
 	return success;
 }
 
-#include "instances.inc"

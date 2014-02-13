@@ -705,4 +705,3 @@ template <typename REAL>
 	}
 }
 
-#include "instances.inc"

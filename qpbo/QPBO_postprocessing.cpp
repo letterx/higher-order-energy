@@ -168,4 +168,3 @@ template <typename REAL>
 	ComputeWeakPersistencies();
 }
 
-#include "instances.inc"
