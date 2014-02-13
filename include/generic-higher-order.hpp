@@ -6,6 +6,7 @@
 #include "pairwise-cover-grid.hpp"
 #include "HOCR.h"
 #include "PseudoBoolean.h"
+#include "y-linear-energy.hpp"
 #include <string>
 
 enum class OptType {

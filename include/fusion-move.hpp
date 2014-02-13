@@ -253,7 +253,12 @@ void FusionMove(FusionStats& stats,
         }
         stats.labeled = stats.swaps = size;
     } else if (optType == OptType::Y_Linear) {
-        // TODO(irwinherrmann)
+        YLinearEnergy<Energy, D> yLinear;
+        SetupFusionEnergy(size, current, proposed, cliqueSystem, yLinear);
+        yLinear.ToQuadratic(qr);
+        qr.Solve();
+        qr.ComputeWeakPersistencies();
+        GetFusedImage(stats, size, current, proposed, out, qr);
     }
     std::chrono::duration<double> time = std::chrono::system_clock::now() - start;
     stats.time = time.count();
