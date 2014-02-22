@@ -324,6 +324,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
 
 
 
+
     return 1;
 
 }
