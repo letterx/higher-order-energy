@@ -78,6 +78,8 @@ class YLinearEnergy {
 
         typedef std::vector<uint32_t> Partition;
         std::vector<Partition> _partitions;
+        typedef std::map<uint32_t, std::vector<uint32_t>> DeltaMap;
+        std::vector<DeltaMap> _deltas;
 };
 
 template <typename R, int D>
@@ -94,8 +96,8 @@ template <typename R, int D>
 inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
     typedef std::map<uint32_t, int> SubsetMap;
     std::vector<SubsetMap> subsetMaps(n+1);
-
-   for (int i = 1; i <= n; ++i) {
+    std::vector<std::vector<uint32_t>> subsets;
+    for (int i = 1; i <= n; ++i) {
         uint32_t max_subset = 1 << n;
         int subsets_size_i = 0;
         for (uint32_t subset = 0; subset < max_subset; ++subset) {
@@ -108,6 +110,7 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
             if (bits_set == i) {
                 subsetMaps[i][subset] = subsets_size_i;
                 subsets_size_i++;
+                subsets[i].push_back(subset);
             }
         }
         subsetCounts[i] = subsets_size_i;
@@ -146,8 +149,31 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
         model.optimize();
         partitionCounts[i] = model.get(GRB_DoubleAttr_ObjVal);
 
-        // TODO(irwinherrmann): finish this part
-        //_partitions[i].push_back(A_{i})
+        // Add to partition
+        for (int j = 0; j < vars.size(); j++) {
+            if (vars[j].get(GRB_DoubleAttr_X) == 1) {
+                _partitions[i].push_back(j);
+            }
+        }
+        // Calculate delta
+        // Assumes it doesn't matter which A_{i+1} goes to which A_i as long as assigned correctly 
+        // TODO(irwinherrmann): abstract
+        for (uint32_t a_next : subsets[i+1]) {
+            for (uint32_t a : _partitions[i]) {
+                int diff = 0;
+                for (int i = 0; i < n; i++) {
+                    diff += ((a_next << i) & 1) ^ ((a << i) & 1);
+                    if (diff > 1) {
+                        break; // no need to keep looking
+                    }
+                }
+                if (diff == 1) {
+                    _deltas[i][a].push_back(a_next);
+                    break; // been assigned don't need to find another one
+                }
+            } 
+        }
+
 
         } catch (GRBException e) {
             cout << "Error code = " << e.getErrorCode() << endl;
@@ -238,22 +264,22 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
         for (uint32_t a : _partitions[k]) {
             // M_a calculation
             M_a[k][a] = 1;
-            for (int i = 0; i < n; i++) {
-                if ((a >> i) & 1 == 0) {
-                    int neighbor = a | (1 << i);
-                    M_a[k][a] += sigma_x[k-1][neighbor] - energyTable[neighbor];
-                }
+            std::vector<uint32_t> delta_a = _deltas[k][a];
+            for (uint32_t ai : delta_a) {
+                M_a[k][a] += sigma_x[k-1][ai] - energyTable[ai];
             }
 
             // l_ax calculation
             for (int i = 0; i < n; i++) {
+                uint32_t ai = a | (1 << i);
+                std::vector<uint32_t> delta_a = _deltas[k][a];
                 if ((a >> i) & 1) {
                     l_ai[a][i] += -M_a[k][a];
+                } else if (std::find(delta_a.begin(), delta_a.end(), ai) != delta_a.end()) {
+                    l_ai[a][i] -= (sigma_x[k-1][ai] - energyTable[ai]); 
                 } else {
-                    int neighbor = a | (1 << i);
-                    l_ai[a][i] -= (sigma_x[k-1][neighbor] - energyTable[neighbor]); 
+                    l_ai[a][i] += M_a[k][a];
                 }
-                //
             }
         }
 
@@ -295,6 +321,8 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
     }
 
     // Add Terms 
+
+
 
     return 1;
 

@@ -70,6 +70,10 @@ int main (int argc, char **argv) {
         model.optimize();
         partitionCounts[i] = model.get(GRB_DoubleAttr_ObjVal);
 
+        for (GRBVar var : vars) {
+            cout << "var" << var.get(GRB_DoubleAttr_X) << endl;
+        }
+
         } catch (GRBException e) {
             cout << "Error code = " << e.getErrorCode() << endl;
             cout << e.getMessage() << endl;
