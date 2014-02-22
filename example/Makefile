@@ -46,7 +46,7 @@ foe-6: foe-6.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ foe-6.o image.o foe-cliques.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
 
 count-attractive-partition: count-attractive-partition.o
-	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ count-attractive-partition.o -lgurobi56 -lgurobi_c++
+	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ count-attractive-partition.o -lgurobi_c++ -lgurobi56 
 
 $(LIBPETTER): $(QPBO_OBJS)
 	cd ../grd; $(MAKE) obj/submodular/libpetter.a obj/submodular/maxflow.o

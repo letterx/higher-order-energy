@@ -36,6 +36,7 @@ int main (int argc, char **argv) {
         subsetCounts[i] = subsets_size_i;
     }
 
+
     for (int i = 1; i < n; ++i) {
         auto& subsets = subsetMaps[i];
         auto& subsetsNext = subsetMaps[i+1];
@@ -47,12 +48,16 @@ int main (int argc, char **argv) {
         model.set(GRB_IntAttr_ModelSense, 1.0);
 
         std::vector<GRBVar> vars;
-        for (const auto& p : subsets)
+        // TODO(irwinherrmann): adds more variables than needed?
+        // They're probably discarded in the minimization?
+        for (const auto& p : subsets) {
             vars.push_back(model.addVar(0.0, 1.0, 1.0, GRB_BINARY));
+        }
         model.update();
         for (const auto& p : subsetsNext) {
             GRBLinExpr constr{};
             auto subset = p.first;
+            // Ensures constraint (3) is met
             for (int b = 0; b < n; ++b) {
                 if (subset & (1 << b)) {
                     uint32_t neighbor = subset ^ (1 << b);
@@ -85,5 +90,5 @@ int main (int argc, char **argv) {
     std::cout << "\nTotal subsets: " << totalSubsets << "\tTotal partition size: " << totalPartitions << "\n";
 
     return 0;
-}
 
+}
