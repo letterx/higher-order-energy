@@ -320,9 +320,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
         }
     }
 
-    // Add Terms 
-
-
+    // TODO(irwinherrmann) - add terms
 
 
     return 1;
