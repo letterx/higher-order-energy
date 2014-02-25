@@ -70,7 +70,7 @@ class YLinearEnergy {
 
         R _constantTerm;
 
-        VarId _varCounter;
+        VarId _maxVar;
 
         typedef std::vector<Clique> CliqueVec;
         std::vector<R> _unaryTerms;
@@ -196,8 +196,12 @@ inline void YLinearEnergy<R, D>::AddClique(const std::vector<VarId>& vars,
     const unsigned int size = vars.size();
     const unsigned int numAssignments = 1 << size;
     assert(energyTable.size() == numAssignments);
-    _varCounter += vars.size();
     _cliques.push_back(Clique(vars, energyTable));
+    for (VarId var : vars) {
+        if (var > _maxVar) {
+            _maxVar = var;
+        }
+    }
 }
 
 template <typename R, int D>
@@ -328,7 +332,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
 
     // TODO(irwinherrmann): check! esp pairwise term
     for (int i = 0; i < n - 1; i++) {
-        VarId wi = ++_varCounter;
+        VarId wi = ++_maxVar;
         qr.AddUnaryTerm(wi, 0, C_i[i]*i);
         for (int j = 0; j < n; j++) {
             qr.AddPairwiseTerm(wi, vars[j], 0, 0, 0, C_i[i]);
@@ -336,7 +340,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
     }
 
     // Quadralization of min {l_a(x), 0} term. n+1 is new variable
-    VarId y = ++_varCounter; // new variable
+    VarId y = ++_maxVar; // new variable
 
     for (int i = 0; i < n; i++) {
         xi_coeff = 0;
