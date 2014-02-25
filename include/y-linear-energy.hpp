@@ -186,27 +186,6 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
     }
 }
 
-
-/**
-* Term manipulation
-*/
-
-template <typename R, int D>
-inline typename YLinearEnergy<R, D>::VarId 
-YLinearEnergy<R, D>::AddVar() {
-    _unaryTerms.push_back(0);
-    return _varCounter++;
-}
-
-template <typename R, int D>
-inline typename YLinearEnergy<R, D>::VarId 
-YLinearEnergy<R, D>::AddVars(int n) {
-    VarId firstVar = _varCounter;
-    for (int i = 0; i < n; ++i)
-        this->AddVar();
-    return firstVar;
-
-
 /**
 * Clique manipulations
 */
@@ -217,10 +196,9 @@ inline void YLinearEnergy<R, D>::AddClique(const std::vector<VarId>& vars,
     const unsigned int size = vars.size();
     const unsigned int numAssignments = 1 << size;
     assert(energyTable.size() == numAssignments);
+    _varCounter += vars.size();
     _cliques.push_back(Clique(vars, energyTable));
 }
-
-
 
 template <typename R, int D>
 template <typename QR>
@@ -320,8 +298,57 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
         }
     }
 
-    // TODO(irwinherrmann) - add terms
+    // Quadralization of symmetric term (sums of beta_k values)
+    // g(0) = g(1) = 0 in this case
+    int C = 0;
+    for (int k = 0; k < n; k++) {
+        C += beta_k[k]; 
+    }
 
+    int C_i[n];
+    for (int i = 0; i < n; i++) {
+        for (int k = 0; k < n; k++) {
+            int c_ik = 0;
+            if (i == k) {
+                c_ik = 3;
+            } else if (i == k + 1 || i == k - 1) {
+                c_ik = 0;
+            } else {
+                c_ik = 1;
+            }
+            C_i[i] += beta_k[k] * c_ik;
+        }
+    } 
+
+    for (int j = 0; j < n; j++) {
+        for (int i = 0; i < j; i++) {
+            qr.AddPairwiseTerm(_vars[i], _vars[j], 0, 0, 0, C);
+        }
+    }
+
+    // TODO(irwinherrmann): check! esp pairwise term
+    for (int i = 0; i < n - 1; i++) {
+        VarId wi = ++_varCounter;
+        qr.AddUnaryTerm(wi, 0, C_i[i]*i);
+        for (int j = 0; j < n; j++) {
+            qr.AddPairwiseTerm(wi, vars[j], 0, 0, 0, C_i[i]);
+        } 
+    }
+
+    // Quadralization of min {l_a(x), 0} term. n+1 is new variable
+    VarId y = ++_varCounter; // new variable
+
+    for (int i = 0; i < n; i++) {
+        xi_coeff = 0;
+        // all a\in A
+        for (std::vector<uint32_t> partitions : _partitions) {
+            for (uint32_t a : partitions) {
+                xi_coeff += l_ai[a][i];
+            }
+        }
+        qr.AddPairwiseTerm(y, vars[i], 0, 0, 0, xi_coeff);
+    }
+    // no unary term due to construction of l_ai
 
     return 1;
 
