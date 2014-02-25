@@ -28,8 +28,8 @@ class YLinearEnergy {
 
         // Adds variables to the YLinearEnergy. Variables must be added 
         // before any terms referencing them can be added
-        VarId AddVar();
-        VarId AddVars(int n);
+        VarId AddVar() {};
+        VarId AddVars(int n) {};
         VarId NumVars() const { return _maxVar; }
         NodeId AddNode(int n = 1) { return AddVars(n); }
 
