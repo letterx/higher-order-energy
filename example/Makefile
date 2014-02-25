@@ -8,7 +8,7 @@ INCLUDES = -I$(QPBO_DIR) -I$(HIGHER_ORDER_DIR) -I../hocr -I../grd/source/library
 OPT ?= -O3
 CXX_FLAGS = $(OPT) -Wall --std=c++0x $(INCLUDES) $(DEFS)
 LD_FLAGS = -L../grd/obj/submodular/ -L $(CLPLIBDIR) -L${GUROBI_HOME}/lib
-LIBS = -lboost_program_options -lpetter -lClp -lCoinUtils -llapack
+LIBS = -lboost_program_options -lpetter -lClp -lCoinUtils -llapack  -lgurobi_c++ -lgurobi56
 
 EXAMPLE_SRCS = higher-order-example.cpp \
 			   image.cpp \

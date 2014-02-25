@@ -15,6 +15,7 @@
 #include <vector>
 #include <list>
 #include <boost/foreach.hpp>
+#include "gurobi_c++.h"
 
 template <typename R, int D>
 class YLinearEnergy {
@@ -36,11 +37,11 @@ class YLinearEnergy {
         // where k is the size of the clique.
         void AddClique(const std::vector<VarId>& vars, const std::vector<R>& energy);
 
-        void AddUnaryTerm(VarId v, R coeff);
+        void AddUnaryTerm(VarId v, R coeff) { _unaryTerms[v] += coeff; }
         void AddUnaryTerm(VarId v, R E0, R E1) { AddUnaryTerm(v, E1 - E0); } 
 
         // Calculates attractive partitions
-        void CalculateAttractivePartitions();
+        void CalculateAttractivePartition(int n);
  
         // Utility - TODO(inrwherrmann): move this somewhere else
         int Count(uint32_t x, int n);
@@ -56,7 +57,7 @@ class YLinearEnergy {
         void ToQuadratic(QR &qr);
 
         template <typename QR>
-        inline void AddReducedClique(const std::vector<VarId>& vars,
+        inline int AddReducedClique(const std::vector<VarId>& vars,
                 const std::vector<R>& energyTable,
                 QR& qr);
     private:
@@ -113,11 +114,10 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
                 subsets[i].push_back(subset);
             }
         }
-        subsetCounts[i] = subsets_size_i;
     }
 
     for (int i = 1; i < n; ++i) {
-        auto& subsets = subsetMaps[i];
+        auto& subsetsThis = subsetMaps[i];
         auto& subsetsNext = subsetMaps[i+1];
 
         try {
@@ -129,7 +129,7 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
         std::vector<GRBVar> vars;
         // TODO(irwinherrmann): adds more variables than needed?
         // They're probably discarded in the minimization?
-        for (const auto& p : subsets) {
+        for (const auto& p  : subsetsThis) {
             vars.push_back(model.addVar(0.0, 1.0, 1.0, GRB_BINARY));
         }
         model.update();
@@ -140,14 +140,13 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
             for (int b = 0; b < n; ++b) {
                 if (subset & (1 << b)) {
                     uint32_t neighbor = subset ^ (1 << b);
-                    constr += vars[subsets[neighbor]];
+                    constr += vars[subsetsThis[neighbor]];
                 }
             }
             model.addConstr(constr, GRB_GREATER_EQUAL, 1.0);
         }
         model.update();
         model.optimize();
-        partitionCounts[i] = model.get(GRB_DoubleAttr_ObjVal);
 
         // Add to partition
         for (int j = 0; j < vars.size(); j++) {
@@ -176,10 +175,10 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
 
 
         } catch (GRBException e) {
-            cout << "Error code = " << e.getErrorCode() << endl;
-            cout << e.getMessage() << endl;
+            std::cout << "Error code = " << e.getErrorCode() << std::endl;
+            std::cout << e.getMessage() << std::endl;
         } catch (...) {
-            cout << "Exception during optimization" << endl;
+            std::cout << "Exception during optimization" << std::endl;
             throw;
         }
 
@@ -197,7 +196,7 @@ inline void YLinearEnergy<R, D>::AddClique(const std::vector<VarId>& vars,
     const unsigned int numAssignments = 1 << size;
     assert(energyTable.size() == numAssignments);
     _varCounter += vars.size();
-    _cliques.push_back(Clique(vars, energyTable));
+    _cliques.push_back(Clique{vars, energyTable});
 }
 
 template <typename R, int D>
@@ -223,8 +222,8 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
     // Indexed by k.
     int beta[n];
     // f(x)
-    std::vector<R> sigma_x[n];
-    std::vector<R> h_x[n]
+    std::vector<std::vector<R>> sigma_x(n);
+    std::vector<std::vector<R>> h_x(n);
     // f(a)
     R M_a[n][numAssign];    
     // f(a, x) linear in i, slope of each index
@@ -232,7 +231,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
 
     // Initialize
     for (int i = 0; i < numAssign; i++) {
-        sigma[0][i] = 0;
+        sigma_x[0][i] = 0;
     }
 
     // TODO(irwinherrmann): abstract things
@@ -283,7 +282,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
         for (uint32_t x = 0; x < numAssign; x++) {
             if (Count(x, n) == k + 2) {
                 int value = energyTable[x] - h_x[k][x];
-                if (value > max) {
+                if (value > beta[k]) {
                     beta[k] = value;
                 }
             }
@@ -291,9 +290,9 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
         
         // sigma_x calculation
         for (uint32_t x = 0; x < numAssign; x++) {
-            sigma[k][x] = h_x[k][x];
+            sigma_x[k][x] = h_x[k][x];
             if (Count(x, n) == k+2) {
-                sigma[k][x] += beta[k];
+                sigma_x[k][x] += beta[k];
             }
         }
     }
@@ -302,7 +301,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
     // g(0) = g(1) = 0 in this case
     int C = 0;
     for (int k = 0; k < n; k++) {
-        C += beta_k[k]; 
+        C += beta[k]; 
     }
 
     int C_i[n];
@@ -316,13 +315,13 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
             } else {
                 c_ik = 1;
             }
-            C_i[i] += beta_k[k] * c_ik;
+            C_i[i] += beta[k] * c_ik;
         }
     } 
 
     for (int j = 0; j < n; j++) {
         for (int i = 0; i < j; i++) {
-            qr.AddPairwiseTerm(_vars[i], _vars[j], 0, 0, 0, C);
+            qr.AddPairwiseTerm(vars[i], vars[j], 0, 0, 0, C);
         }
     }
 
@@ -339,7 +338,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
     VarId y = ++_varCounter; // new variable
 
     for (int i = 0; i < n; i++) {
-        xi_coeff = 0;
+        R xi_coeff = 0;
         // all a\in A
         for (std::vector<uint32_t> partitions : _partitions) {
             for (uint32_t a : partitions) {
@@ -354,6 +353,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
 
 }
 
+template <typename R, int D>
 inline int YLinearEnergy<R, D>::Count(uint32_t x, int n) {
     int count = 0;
     for (int i = 0; i < n; i++) {
