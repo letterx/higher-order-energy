@@ -163,6 +163,7 @@ void FusionMove(FusionStats& stats,
         QuadraticRep& qr,
         OptType optType) 
 {
+
     std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
     if (optType == OptType::Fix || optType == OptType::Fix_I) {
         HigherOrderEnergy<Energy, D> hoe;

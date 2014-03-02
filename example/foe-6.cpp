@@ -108,6 +108,8 @@ int main(int argc, char **argv) {
                     methods.push_back(OptType::PC_Grid_I);
                 } else if (m == std::string("grad")) {
                     methods.push_back(OptType::Grad);
+                } else if (m == std::string("y-linear")) {
+                    methods.push_back(OptType::Y_Linear);
                 } else {
                     std::cout << "Unrecognized method type: " << m << "\n";
                     exit(-1);
@@ -162,7 +164,6 @@ int main(int argc, char **argv) {
                 std::string tmpname = std::string("tmp+") + std::to_string(i+1) + ".pgm";
                 ImageToFile(current, tmpname.c_str());
             }
-
 
             FusionStats stats;
             stats.iter = i;
