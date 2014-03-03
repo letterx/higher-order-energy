@@ -20,14 +20,14 @@ QPBO_OBJS = $(QPBO_SRCS:.cpp=.o)
 
 MAXFLOW_OBJS = ../grd/obj/submodular/maxflow.o
 
-SRCS = $(EXAMPLE_SRCS) $(QPBO_SRCS) foe-9.cpp test-pairwise.cpp
+SRCS = $(EXAMPLE_SRCS) $(QPBO_SRCS) foe-9.cpp test-pairwise.cpp test-ylinear.cpp
 
 LIBPETTER = ../grd/obj/submodular/libpetter.a
 
 TARGET = higher-order-example
 
 .PHONY: all
-all: $(TARGET) foe-9 foe-6 test-pairwise count-attractive-partition
+all: $(TARGET) foe-9 foe-6 test-pairwise test-ylinear count-attractive-partition
 
 $(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
@@ -36,6 +36,10 @@ $(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS) $(LIBPETTER)
 test-pairwise: test-pairwise.o $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ test-pairwise.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
+
+test-ylinear: test-ylinear.o $(QPBO_OBJS) $(LIBPETTER)
+	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
+	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ test-ylinear.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
 
 foe-9: foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \

@@ -149,7 +149,11 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
         // TODO(irwinherrmann): adds more variables than needed?
         // They're probably discarded in the minimization?
         for (const auto& p  : subsetsThis) {
-            vars.push_back(model.addVar(0.0, 1.0, 1.0, GRB_BINARY));
+            std::stringstream ss;
+            std::string name;
+            ss << p.first;
+            ss >> name;
+            vars.push_back(model.addVar(0.0, 1.0, 1.0, GRB_BINARY, name));
         }
         model.update();
         for (const auto& p : subsetsNext) {
@@ -171,7 +175,7 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
         std::vector<uint32_t> row;
         for (uint32_t j = 0; j < vars.size(); j++) {
             if (vars[j].get(GRB_DoubleAttr_X) == 1) {
-                row.push_back(j);
+                row.push_back(atoi(vars[j].get(GRB_StringAttr_VarName).c_str()));
             }
         }
         _partitions[i] = row;
@@ -182,7 +186,13 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
             for (uint32_t a : _partitions[i]) {
                 int diff = 0;
                 for (int i = 0; i < n; i++) {
-                    diff += ((a_next << i) & 1) ^ ((a << i) & 1);
+                    uint32_t a_i = (a >> i) & 1;
+                    uint32_t a_next_i = (a_next >> i) & 1;
+                    if (a_i == 0 && a_next_i == 1) {
+                        diff += 1;
+                    } else if (a_i == 1 && a_next_i == 0) {
+                        diff = 2; // exit
+                    }
                     if (diff > 1) {
                         break; // no need to keep looking
                     }
@@ -195,10 +205,10 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
         }
 
         } catch (GRBException e) {
-            std::cout << "Error code = " << e.getErrorCode() << std::endl;
-            std::cout << e.getMessage() << std::endl;
+            // std::cout << "Error code = " << e.getErrorCode() << std::endl;
+            // std::cout << e.getMessage() << std::endl;
         } catch (...) {
-            std::cout << "Exception during optimization" << std::endl;
+            // std::cout << "Exception during optimization" << std::endl;
             throw;
         }
 
@@ -249,10 +259,9 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
     R l_ai[numAssign][n]; // indexed by a, i
 
     // Initialize
-    for (int i = 0; i < numAssign; i++) {
+    for (uint32_t i = 0; i < numAssign; i++) {
         sigma_x[0][i] = 0;
     }
-
 
     // TODO(irwinherrmann): abstract things
     for (int k = 1; k < vars.size(); k++) {
@@ -265,10 +274,12 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
             for (uint32_t ai : delta_a) {
                 M_a[k][a] += sigma_x[k-1][ai] - energyTable[ai];
             }
-
+            // std::cout << "M_a" << M_a[k][a] << " k " << k << " a " << a << std::endl;
             // l_ax calculation
             for (int i = 0; i < n; i++) {
+                l_ai[a][i] = 0;
                 uint32_t ai = a | (1 << i);
+                // std::cout << "ai " << ai << std::endl;
                 std::vector<uint32_t> delta_a = _deltas[k][a];
                 if ((a >> i) & 1) {
                     l_ai[a][i] += -M_a[k][a];
@@ -277,6 +288,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
                 } else {
                     l_ai[a][i] += M_a[k][a];
                 }
+                // std::cout << "l_ai " << l_ai[a][i] << " a " << a << " i " << i << std::endl;
             }
         }
 
@@ -295,11 +307,13 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
                     h_x[k][x] += l_ax;
                }
             }
+            // std::cout << "h_x " << h_x[k][x] << " k " << k << " x " << x << std::endl;
         }
     
         // B_k calculation
         beta[k] = INT_MIN;
         for (uint32_t x = 0; x < numAssign; x++) {
+            // std::cout << "counting " << Count(x, n) << " x " << x << std::endl;
             if (Count(x, n) == k + 2) {
                 int value = energyTable[x] - h_x[k][x];
                 if (value > beta[k]) {
@@ -307,6 +321,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
                 }
             }
         }
+        // std::cout << "beta_k " << beta[k] << " k " << k << std::endl;
         
         // sigma_x calculation
         for (uint32_t x = 0; x < numAssign; x++) {
@@ -314,19 +329,24 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
             if (Count(x, n) == k+2) {
                 sigma_x[k][x] += beta[k];
             }
+            // std::cout << "sigma_x " << sigma_x[k][x] << " x " << x << " k " << k << std::endl;
         }
     }
 
     // Quadralization of symmetric term (sums of beta_k values)
     // g(0) = g(1) = 0 in this case
     int C = 0;
-    for (int k = 0; k < n; k++) {
+    // never include beta[n-1]. it is not used.
+    for (int k = 2; k < n - 1; k++) {
         C += beta[k]; 
     }
 
+    // std::cout << "C " << C << std::endl;
+
     int C_i[n];
     for (int i = 0; i < n; i++) {
-        for (int k = 0; k < n; k++) {
+        C_i[i] = 0;
+        for (int k = 2; k < n-1; k++) {
             int c_ik = 0;
             if (i == k) {
                 c_ik = 3;
@@ -337,6 +357,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
             }
             C_i[i] += beta[k] * c_ik;
         }
+        // std::cout << "C_i " << C_i[i] << " i " << i << std::endl;
     } 
 
     for (int j = 0; j < n; j++) {
@@ -345,15 +366,18 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
         }
     }
 
+
     // TODO(irwinherrmann): check! esp pairwise term
     for (int i = 0; i < n - 1; i++) {
         VarId wi = AddVar();
         qr.AddNode();
-        qr.AddUnaryTerm(wi, 0, C_i[i]*i);
+        qr.AddUnaryTerm(wi, 0, C_i[i]*(i+1));
+
         for (int j = 0; j < n; j++) {
-            qr.AddPairwiseTerm(wi, vars[j], 0, 0, 0, C_i[i]);
-        } 
+            qr.AddPairwiseTerm(wi, vars[j], 0, 0, 0, -C_i[i]);
+        }
     }
+
 
     // Quadralization of min {l_a(x), 0} term. n+1 is new variable
     VarId y = AddVar(); // new variable
@@ -369,7 +393,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
         }
         qr.AddPairwiseTerm(y, vars[i], 0, 0, 0, xi_coeff);
     }
-    // no unary term due to construction of l_ai
+    qr.AddUnaryTerm(y, 0, energyTable[0]);
 
     return 1;
 }
