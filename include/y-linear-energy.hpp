@@ -205,10 +205,10 @@ inline void YLinearEnergy<R, D>::CalculateAttractivePartition(int n) {
         }
 
         } catch (GRBException e) {
-            // std::cout << "Error code = " << e.getErrorCode() << std::endl;
-            // std::cout << e.getMessage() << std::endl;
+            std::cout << "Error code = " << e.getErrorCode() << std::endl;
+            std::cout << e.getMessage() << std::endl;
         } catch (...) {
-            // std::cout << "Exception during optimization" << std::endl;
+            std::cout << "Exception during optimization" << std::endl;
             throw;
         }
 
@@ -274,12 +274,12 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
             for (uint32_t ai : delta_a) {
                 M_a[k][a] += sigma_x[k-1][ai] - energyTable[ai];
             }
-            // std::cout << "M_a" << M_a[k][a] << " k " << k << " a " << a << std::endl;
+            std::cout << "M_a" << M_a[k][a] << " k " << k << " a " << a << std::endl;
             // l_ax calculation
             for (int i = 0; i < n; i++) {
                 l_ai[a][i] = 0;
                 uint32_t ai = a | (1 << i);
-                // std::cout << "ai " << ai << std::endl;
+                std::cout << "ai " << ai << std::endl;
                 std::vector<uint32_t> delta_a = _deltas[k][a];
                 if ((a >> i) & 1) {
                     l_ai[a][i] += -M_a[k][a];
@@ -288,7 +288,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
                 } else {
                     l_ai[a][i] += M_a[k][a];
                 }
-                // std::cout << "l_ai " << l_ai[a][i] << " a " << a << " i " << i << std::endl;
+                std::cout << "l_ai " << l_ai[a][i] << " a " << a << " i " << i << std::endl;
             }
         }
 
@@ -307,13 +307,13 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
                     h_x[k][x] += l_ax;
                }
             }
-            // std::cout << "h_x " << h_x[k][x] << " k " << k << " x " << x << std::endl;
+            std::cout << "h_x " << h_x[k][x] << " k " << k << " x " << x << std::endl;
         }
     
         // B_k calculation
         beta[k] = INT_MIN;
         for (uint32_t x = 0; x < numAssign; x++) {
-            // std::cout << "counting " << Count(x, n) << " x " << x << std::endl;
+            std::cout << "counting " << Count(x, n) << " x " << x << std::endl;
             if (Count(x, n) == k + 2) {
                 int value = energyTable[x] - h_x[k][x];
                 if (value > beta[k]) {
@@ -321,7 +321,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
                 }
             }
         }
-        // std::cout << "beta_k " << beta[k] << " k " << k << std::endl;
+        std::cout << "beta_k " << beta[k] << " k " << k << std::endl;
         
         // sigma_x calculation
         for (uint32_t x = 0; x < numAssign; x++) {
@@ -329,7 +329,7 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
             if (Count(x, n) == k+2) {
                 sigma_x[k][x] += beta[k];
             }
-            // std::cout << "sigma_x " << sigma_x[k][x] << " x " << x << " k " << k << std::endl;
+            std::cout << "sigma_x " << sigma_x[k][x] << " x " << x << " k " << k << std::endl;
         }
     }
 
@@ -341,23 +341,22 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
         C += beta[k]; 
     }
 
-    // std::cout << "C " << C << std::endl;
+    std::cout << "C " << C << std::endl;
 
     int C_i[n];
     for (int i = 0; i < n; i++) {
         C_i[i] = 0;
+        int inew = i + 1;
         for (int k = 2; k < n-1; k++) {
-            int c_ik = 0;
-            if (i == k) {
+            int c_ik = 1;
+            if (inew == k) {
                 c_ik = 3;
-            } else if (i == k + 1 || i == k - 1) {
+            } else if (inew == k + 1 || inew == k - 1) {
                 c_ik = 0;
-            } else {
-                c_ik = 1;
             }
             C_i[i] += beta[k] * c_ik;
         }
-        // std::cout << "C_i " << C_i[i] << " i " << i << std::endl;
+        std::cout << "C_i " << C_i[i] << " i " << inew << std::endl;
     } 
 
     for (int j = 0; j < n; j++) {
@@ -369,9 +368,11 @@ inline int YLinearEnergy<R, D>::AddReducedClique(const std::vector<VarId>& vars,
 
     // TODO(irwinherrmann): check! esp pairwise term
     for (int i = 0; i < n - 1; i++) {
+        int inew = i + 1;
+
         VarId wi = AddVar();
         qr.AddNode();
-        qr.AddUnaryTerm(wi, 0, C_i[i]*(i+1));
+        qr.AddUnaryTerm(wi, 0, C_i[i] * inew);
 
         for (int j = 0; j < n; j++) {
             qr.AddPairwiseTerm(wi, vars[j], 0, 0, 0, -C_i[i]);
