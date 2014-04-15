@@ -343,6 +343,7 @@ void GetFusedImage(FusionStats& stats,
         RandomAccessIterator out, 
         QuadraticRep& qr) 
 {
+    stats.numVars = size;
     for (size_t i = 0; i < size; ++i) {
         int label = qr.GetLabel(i);
         if (label == 1) {
