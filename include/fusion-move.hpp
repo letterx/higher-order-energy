@@ -85,6 +85,9 @@ void FusionMove(FusionStats& stats,
         OptType optType = OptType::Fix);
 #endif
 
+template <typename REAL, typename QuadraticRep>
+void QRStats(FusionStats& stats, QuadraticRep& qr);
+
 /*
  * Set up the fusion move energy as a HigherOrderEnergy
  *
@@ -168,6 +171,7 @@ void FusionMove(FusionStats& stats,
         HigherOrderEnergy<Energy, D> hoe;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
         hoe.ToQuadratic(qr);
+        QRStats<Energy>(stats, qr);
         qr.Solve();
         qr.ComputeWeakPersistencies();
         if (optType == OptType::Fix_I)
@@ -177,6 +181,7 @@ void FusionMove(FusionStats& stats,
         PairwiseCover<Energy, D> hoe;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
         hoe.ToQuadratic(qr);
+        QRStats<Energy>(stats, qr);
         qr.MergeParallelEdges();
         qr.Solve();
         qr.ComputeWeakPersistencies();
@@ -190,6 +195,7 @@ void FusionMove(FusionStats& stats,
         pc.SetHeight(height);
         SetupFusionEnergy(size, current, proposed, cliqueSystem, pc);
         pc.ToQuadratic(qr);
+        QRStats<Energy>(stats, qr);
         qr.Solve();
         qr.ComputeWeakPersistencies();
         if (optType == OptType::PC_Grid_I)
@@ -205,6 +211,7 @@ void FusionMove(FusionStats& stats,
         QPBO<Energy> qpbo(numvars, numvars*4);
         convert(qpbo, qr);
         qr.clear();
+        QRStats<Energy>(stats, qpbo);
         qpbo.MergeParallelEdges();
         qpbo.Solve();
         qpbo.ComputeWeakPersistencies();
@@ -350,6 +357,24 @@ void GetFusedImage(FusionStats& stats,
         }
     }
     //std::cout << "Labeled: " << stats.labeled << "\tSwaps: " << stats.swaps << "\n";
+}
+
+template <typename REAL, typename QuadraticRep>
+void QRStats(FusionStats& stats, QuadraticRep& qr) {
+    typedef typename QuadraticRep::EdgeId EdgeId;
+    typedef typename QuadraticRep::NodeId NodeId;
+    for (EdgeId e = qr.GetNextEdgeId(-1); e >= 0; e = qr.GetNextEdgeId(e)) {
+        stats.numEdges++;
+        NodeId i, j;
+        REAL E00, E01, E10, E11;
+        qr.GetTwicePairwiseTerm(e, i, j, E00, E01, E10, E11);
+        REAL weight = E00 + E11 - E10 - E01;
+        if (weight > 0) {
+            stats.nonSubmodularWeight += weight;
+            stats.numNonSubmodularEdges++;
+        }
+        stats.totalWeight += abs(weight);
+    }
 }
 
 #endif

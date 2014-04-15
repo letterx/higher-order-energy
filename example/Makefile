@@ -27,7 +27,7 @@ LIBPETTER = ../grd/obj/submodular/libpetter.a
 TARGET = higher-order-example
 
 .PHONY: all
-all: $(TARGET) foe-9 foe-6 test-pairwise count-attractive-partition
+all: $(TARGET) foe-9 foe-6 test-pairwise
 
 $(TARGET): $(EXAMPLE_OBJS) $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
@@ -44,9 +44,6 @@ foe-9: foe-9.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
 foe-6: foe-6.o image.o foe-cliques.o $(QPBO_OBJS) $(LIBPETTER)
 	LD_RUN_PATH=$$LD_RUN_PATH:$(CLPLIBDIR) \
 	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ foe-6.o image.o foe-cliques.o $(QPBO_OBJS) $(MAXFLOW_OBJS) $(LIBS)
-
-count-attractive-partition: count-attractive-partition.o
-	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ count-attractive-partition.o -lgurobi56 -lgurobi_c++
 
 $(LIBPETTER): $(QPBO_OBJS)
 	cd ../grd; $(MAKE) obj/submodular/libpetter.a obj/submodular/maxflow.o

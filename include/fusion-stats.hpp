@@ -13,6 +13,10 @@ struct FusionStats {
     double initialEnergy;
     double finalEnergy;
     double psnr;
+    int numNonSubmodularEdges = 0;
+    int numEdges = 0;
+    int64_t nonSubmodularWeight = 0;
+    int64_t totalWeight = 0;
 
     FusionStats()
         : iter(0), numVars(0), additionalVars(0), labeled(0), swaps(0),

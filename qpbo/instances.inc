@@ -9,11 +9,6 @@
 
 // Instantiations
 
-template class QPBO<int>;
-template class QPBO<float>;
-template class QPBO<double>;
-template class QPBO<int64_t>;
-
 template <> 
 	inline void QPBO<int>::get_type_information(const char*& type_name, const char*& type_format)
 {
@@ -41,5 +36,10 @@ template <>
 	type_name = "int64_t";
 	type_format = "lld";
 }
+
+template class QPBO<int>;
+template class QPBO<float>;
+template class QPBO<double>;
+template class QPBO<int64_t>;
 
 #endif

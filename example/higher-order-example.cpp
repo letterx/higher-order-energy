@@ -227,6 +227,10 @@ int main(int argc, char **argv) {
             statsFile << double(s.initialEnergy) / DoubleToREAL  << " ";
             statsFile << double(s.finalEnergy) / DoubleToREAL << " ";
             statsFile << s.psnr << " ";
+            statsFile << s.numNonSubmodularEdges << " ";
+            statsFile << s.numEdges << " ";
+            statsFile << s.nonSubmodularWeight << " ";
+            statsFile << s.totalWeight << " ";
             statsFile << "\n";
         }
     }
