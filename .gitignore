@@ -30,3 +30,4 @@ count-attractive-partition
 # Experiment files
 *.pgm
 *.stats
+*.pdf
