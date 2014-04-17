@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     std::vector<std::string> param_methods;
     std::vector<OptType> methods;
     bool lockstep;
-    bool computePSNR;
+    bool computePSNR = false;
     std::string original_name;
     bool grad_descent;
     double eta;
@@ -100,6 +100,8 @@ int main(int argc, char **argv) {
                     methods.push_back(OptType::GRD_Heur);
                 } else if (m == std::string("fix")) {
                     methods.push_back(OptType::Fix);
+                } else if (m == std::string("fix-rand")) {
+                    methods.push_back(OptType::Fix_Rand);
                 } else if (m == std::string("pc")) {
                     methods.push_back(OptType::PC);
                 } else if (m == std::string("pc-grid")) {

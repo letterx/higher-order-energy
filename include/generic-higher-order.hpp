@@ -2,6 +2,7 @@
 #define _GENERIC_HIGHER_ORDER_HPP_
 
 #include "higher-order-energy.hpp"
+#include "higher-order-energy-graph.hpp"
 #include "pairwise-cover.hpp"
 #include "pairwise-cover-grid.hpp"
 #include "HOCR.h"
@@ -11,6 +12,7 @@
 enum class OptType {
     Fix,
     Fix_I, // FGBZ with QPBOI
+    Fix_Rand, // FGBZ with random variable order
     HOCR,
     GRD,
     GRD_Heur,
@@ -25,6 +27,7 @@ inline std::string ToString(OptType ot) {
     switch (ot) {
         case OptType::Fix: return "fix";
         case OptType::Fix_I: return "fix-i";
+        case OptType::Fix_Rand: return "fix-rand";
         case OptType::HOCR: return "hocr";
         case OptType::GRD: return "grd";
         case OptType::GRD_Heur: return "grd-heur";

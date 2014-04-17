@@ -177,6 +177,14 @@ void FusionMove(FusionStats& stats,
         if (optType == OptType::Fix_I)
             FusionImprove(qr);
         GetFusedImage(stats, size, current, proposed, out, qr);
+    } else if (optType == OptType::Fix_Rand) {
+        HigherOrderEnergyGraph<Energy, D> hoe;
+        SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
+        hoe.ToQuadratic(qr);
+        QRStats<Energy>(stats, qr);
+        qr.Solve();
+        qr.ComputeWeakPersistencies();
+        GetFusedImage(stats, size, current, proposed, out, qr);
     } else if (optType == OptType::PC || optType == OptType::PC_I) {
         PairwiseCover<Energy, D> hoe;
         SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);

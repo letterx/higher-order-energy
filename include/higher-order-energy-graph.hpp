@@ -1,5 +1,5 @@
-#ifndef _HIGHER_ORDER_ENERGY_HPP_
-#define _HIGHER_ORDER_ENERGY_HPP_
+#ifndef _HIGHER_ORDER_ENERGY_GRAPH_HPP_
+#define _HIGHER_ORDER_ENERGY_GRAPH_HPP_
 
 /*
  * higher-order-energy.hpp
@@ -26,7 +26,7 @@
  *                       - 31x_1x_3x_4 + 18x_1x_2x_3x_4
  * we can do the following:
  *
- * HigherOrderEnergy<int, 4> f;
+ * HigherOrderEnergyGraph<int, 4> f;
  * f.AddVars(4); 
  * f.AddUnaryTerm(0, 7);
  * f.AddUnaryTerm(1, 9);
@@ -53,28 +53,30 @@
  *
  */
 
-#include <iostream>
-#include <vector>
 #include <list>
+#include <memory>
+#include <vector>
 #include <boost/foreach.hpp>
+#include <boost/heap/binomial_heap.hpp>
+#include <boost/intrusive/set.hpp>
 
 template <typename R, int D>
-class HigherOrderEnergy {
+class HigherOrderEnergyGraph {
     public:
         typedef int VarId;
         typedef VarId NodeId;
 
-        // Constructs empty HigherOrderEnergy with no variables or terms
-        HigherOrderEnergy();
+        // Constructs empty HigherOrderEnergyGraph with no variables or terms
+        HigherOrderEnergyGraph();
 
-        // Adds variables to the HigherOrderEnergy. Variables must be added 
+        // Adds variables to the HigherOrderEnergyGraph. Variables must be added 
         // before any terms referencing them can be added
         VarId AddVar();
         VarId AddVars(int n);
         VarId NumVars() const { return _varCounter; }
         NodeId AddNode(int n = 1) { return AddVars(n); }
 
-        // Adds a monomial to the HigherOrderEnergy. degree must be <= D
+        // Adds a monomial to the HigherOrderEnergyGraph. degree must be <= D
         // vars is an array of length at least degree, with the indices of 
         // the corresponding variables or literals in the monomial
         void AddTerm(R coeff, int degree, const VarId vars[]);
@@ -86,9 +88,9 @@ class HigherOrderEnergy {
         void AddUnaryTerm(VarId v, R coeff);
         void AddUnaryTerm(VarId v, R E0, R E1) { AddUnaryTerm(v, E1 - E0); } 
     
-        // Reduces the HigherOrderEnergy to quadratic form
+        // Reduces the HigherOrderEnergyGraph to quadratic form
         // NOTE: THIS IS A DESTRUCTIVE OPERATION, so do not rely on the 
-        // HigherOrderEnergy being in any useful state after this operation.
+        // HigherOrderEnergyGraph being in any useful state after this operation.
         //
         // This is a templated function, so it will work with any class 
         // implementing the necessary interface. See quadratic-rep.hpp for
@@ -99,7 +101,10 @@ class HigherOrderEnergy {
         void Clear();
 
     private:
-        struct Term
+        typedef boost::intrusive::set_base_hook<
+            boost::intrusive::link_mode<boost::intrusive::normal_link>>
+            TermSetHook;
+        struct Term : public TermSetHook
         {
             R coeff;
             int degree;
@@ -112,70 +117,103 @@ class HigherOrderEnergy {
                     vars[i] = _vars[i];
             }
 
-            bool operator<(const Term& t) const;
-            bool operator==(const Term& t) const;
-
             std::string ToString() const;
 
         };
-        static int Compare(int d1, 
-                const VarId vars1[], 
-                int d2, 
-                const VarId vars2[]);
+        typedef std::unique_ptr<Term> TermPtr;
+        struct TermComp {
+            bool operator()(const Term& t1, const Term& t2) const {
+                if (t1.degree != t2.degree) {
+                    return t1.degree < t2.degree;
+                } else {
+                    for (int i = 0; i < t1.degree; ++i) {
+                        if (t1.vars[i] != t2.vars[i])
+                            return t1.vars[i] < t2.vars[i];
+                    }
+                    return false;
+                }
+            }
+        };
+
+        typedef boost::intrusive::set<
+            Term,
+            boost::intrusive::base_hook<TermSetHook>,
+            boost::intrusive::compare<TermComp>> TermSet;
+
+        typedef std::pair<VarId, int> VarPriority;
+        struct PriorityComp {
+            bool operator()(const VarPriority& p1, const VarPriority& p2) const {
+                return p1.second < p2.second;
+            }
+        };
+        typedef boost::heap::binomial_heap<
+                VarPriority, 
+                boost::heap::compare<PriorityComp>> 
+            PositiveTermsPQ;
+        typedef typename PositiveTermsPQ::handle_type PQHandle;
 
         struct VarRecord {
             VarRecord(VarId id) 
-                : _id(id), _positiveTerms(0), _higherOrderTerms(0), 
-                _quadraticTerms(0), _sumDegrees(0), _terms(), _coeff(0) { }
+                : _id(id)
+                , _higherOrderTerms(0)
+                , _sumDegrees(0)
+                , _terms()
+                , _coeff(0) 
+            { }
             VarId _id;
-            int _positiveTerms;
             int _higherOrderTerms;
-            int _quadraticTerms;
             int _sumDegrees;
-            std::list<Term> _terms;
+            std::vector<int> _terms; // Indices of positive terms
             R _coeff;
+            PQHandle _pqHandle;
 
             void PrintTerms() const;
         };
+        typedef std::vector<VarRecord> varRecordVec_t;
 
-        R _constantTerm;
 
         void RemoveTerm(Term* tp);
+        void AddTerm(Term& t);
         void _EliminatePositiveTerms();
         template <typename QR>
         void _ReduceNegativeTerms(QR& qr);
         void _ReportMultilinearStats();
 
         size_t NumTerms() const {
-            size_t numTerms = 0;
-            BOOST_FOREACH(const VarRecord& vr, _varRecords)
-                numTerms += vr._terms.size();
-            return numTerms;
+            return _terms.size();
         }
 
+        R _constantTerm;
+        std::vector<TermPtr> _terms;
         VarId _varCounter;
-
-        typedef std::vector<VarRecord> varRecordVec_t;
         varRecordVec_t _varRecords;
+        bool _usePriority = true;
+        PositiveTermsPQ _positiveTermsPQ;
+        TermSet _termSet;
 };
 
 template <typename R, int D>
-inline HigherOrderEnergy<R, D>::HigherOrderEnergy()
-    : _constantTerm(0), _varCounter(0), _varRecords()
+inline HigherOrderEnergyGraph<R, D>::HigherOrderEnergyGraph()
+    : _constantTerm(0)
+    , _terms()
+    , _varCounter(0)
+    , _varRecords()
+    , _positiveTermsPQ()
+    , _termSet()
 { }
 
 
 template <typename R, int D>
-inline typename HigherOrderEnergy<R, D>::VarId 
-HigherOrderEnergy<R, D>::AddVar() {
+inline typename HigherOrderEnergyGraph<R, D>::VarId 
+HigherOrderEnergyGraph<R, D>::AddVar() {
     VarRecord vr(_varCounter);
     _varRecords.push_back(vr);
     return _varCounter++;
 }
 
 template <typename R, int D>
-inline typename HigherOrderEnergy<R, D>::VarId 
-HigherOrderEnergy<R, D>::AddVars(int n) {
+inline typename HigherOrderEnergyGraph<R, D>::VarId 
+HigherOrderEnergyGraph<R, D>::AddVars(int n) {
     VarId firstVar = _varCounter;
     for (int i = 0; i < n; ++i)
         this->AddVar();
@@ -184,7 +222,7 @@ HigherOrderEnergy<R, D>::AddVars(int n) {
 
 template <typename R, int D>
 inline void 
-HigherOrderEnergy<R, D>::AddTerm(R coeff, int d, const VarId vars[]) {
+HigherOrderEnergyGraph<R, D>::AddTerm(R coeff, int d, const VarId vars[]) {
     if(coeff == 0) {
         return;
     } else if (d == 0) {
@@ -194,44 +232,64 @@ HigherOrderEnergy<R, D>::AddTerm(R coeff, int d, const VarId vars[]) {
         _varRecords[vars[0]]._coeff += coeff;
         return;
     } else {
-        VarRecord& smallestVarRec = _varRecords[vars[0]];
-        typename std::list<Term>::iterator it = smallestVarRec._terms.begin();
-        int compareVars = 1;
-        while (it != smallestVarRec._terms.end()) {
-            compareVars = Compare(d, vars, it->degree, it->vars); 
-            if (compareVars == 0) {
-                break;
-            } else if (compareVars < 0) {
-                break;
-            } else {
-                ++it;
-            }
-        }
-        if (compareVars == 0) {
-            it->coeff += coeff;
+        _terms.emplace_back(new Term{coeff, d, vars});
+        auto p = _termSet.insert(*_terms.back());
+        if (!p.second) { // Then term already exists
+            Term& t = *p.first;
+            t.coeff += coeff;
+            _terms.pop_back();
         } else {
-            if (d > 2) {
-                smallestVarRec._higherOrderTerms++;
-                smallestVarRec._sumDegrees += d;
-            } else {
-                smallestVarRec._quadraticTerms++;
+            int idx = _terms.size()-1;
+            for (int i = 0; i < d; ++i) {
+                auto& vr = _varRecords[vars[i]];
+                vr._terms.push_back(idx);
+                if (d > 2) {
+                    vr._higherOrderTerms++;
+                    vr._sumDegrees += d;
+                }
             }
-            smallestVarRec._terms.insert(it, Term(coeff, d, vars));
         }
-        if (coeff > 0)
-            smallestVarRec._positiveTerms++;
         return;
     }
 }
 
 template <typename R, int D>
-inline void HigherOrderEnergy<R, D>::AddClique(const std::vector<VarId>& vars,
+inline void 
+HigherOrderEnergyGraph<R, D>::AddTerm(Term& t) {
+    if (t.coeff == 0) {
+        return;
+    } else if (t.degree == 0) {
+        _constantTerm += t.coeff;
+        t.coeff = 0;
+        return;
+    } else if (t.degree == 1) {
+        _varRecords[t.vars[0]]._coeff += t.coeff;
+        t.coeff = 0;
+        return;
+    } else {
+        auto p = _termSet.insert(t);
+        if (!p.second) { // Then term already exists
+            Term& existing = *p.first;
+            assert(&existing != &t);
+            assert(t.degree == existing.degree);
+            for (int i = 0; i < t.degree; ++i) {
+                assert(t.vars[i] == existing.vars[i]);
+            }
+            existing.coeff += t.coeff;
+            t.coeff = 0;
+        }
+        return;
+    }
+}
+
+template <typename R, int D>
+inline void HigherOrderEnergyGraph<R, D>::AddClique(const std::vector<VarId>& vars,
         const std::vector<R>& energyTable) {
     const unsigned int size = vars.size();
     const unsigned int numAssignments = 1 << size;
     assert(energyTable.size() == numAssignments);
 
-    R coeffs[numAssignments];
+    std::vector<R> coeffs(numAssignments);
     for (unsigned int subset = 1; subset < numAssignments; ++subset) {
         coeffs[subset] = 0;
     }
@@ -272,44 +330,47 @@ inline void HigherOrderEnergy<R, D>::AddClique(const std::vector<VarId>& vars,
 }
 
 template <typename R, int D>
-inline void HigherOrderEnergy<R, D>::AddUnaryTerm(VarId var, R coeff) {
+inline void HigherOrderEnergyGraph<R, D>::AddUnaryTerm(VarId var, R coeff) {
     _varRecords[var]._coeff += coeff;
 }
 
 template <typename R, int D>
-void HigherOrderEnergy<R, D>::_EliminatePositiveTerms() {
+void HigherOrderEnergyGraph<R, D>::_EliminatePositiveTerms() {
     size_t numVars = _varRecords.size();
     for (size_t varIndex = 0; varIndex < numVars; ++varIndex) {
         R positiveSum = 0;
         VarId newPosVar = AddVar();
 
-        VarRecord& vr = _varRecords[varIndex];
+        VarRecord& vr = _varRecords.at(varIndex);
+        assert(vr._id == varIndex);
 
-        typename std::list<Term>::iterator termIt = vr._terms.begin();
-        VarId newVars[D];
-        while (termIt != vr._terms.end()) {
-            Term& t = *termIt;
-            //std::cout << "\t" << t.ToString() << std::endl;
-            typename std::list<Term>::iterator currIt = termIt;
-            ++termIt;
+        std::sort(vr._terms.begin(), vr._terms.end(), 
+                [&](int i1, int i2) { return TermComp()(*_terms[i1], *_terms[i2]); }
+                );
 
-            if (t.coeff > 0) {
-                positiveSum += t.coeff;
-                for (int i = 0; i < t.degree - 1; ++i) {
-                    newVars[i] = t.vars[i+1];
-                    assert(newVars[i] >= vr._id);
-                }
-                AddTerm(t.coeff, t.degree - 1, newVars);
-                newVars[t.degree - 1] = newPosVar;
-                AddTerm(-t.coeff, t.degree, newVars);
-                if (t.degree == 2) {
-                    vr._quadraticTerms--;
-                } else {
-                    vr._higherOrderTerms--;
-                    vr._sumDegrees -= t.degree;
-                }
-                vr._terms.erase(currIt);
+        for (auto termIdx : vr._terms) {
+            assert(termIdx < _terms.size());
+            Term& t = *_terms.at(termIdx);
+            if (_termSet.find(t) == _termSet.end()) {
+                assert(t.coeff == 0);
+                continue;
             }
+            assert(t.degree > 1);
+            assert(t.degree <= D);
+            assert(_termSet.find(t) != _termSet.end()); // May be too conservative
+            //std::cout << "\t" << t.ToString() << std::endl;
+            if (t.coeff <= 0)
+                continue;
+
+            positiveSum += t.coeff;
+            _termSet.erase(_termSet.iterator_to(t));
+            auto newEnd = std::remove(t.vars, t.vars + t.degree, varIndex);
+            assert(newEnd+1 == t.vars+t.degree);
+            t.degree--;
+            auto coeff = t.coeff;
+            AddTerm(t);
+            t.vars[t.degree] = newPosVar;
+            AddTerm(-coeff, t.degree+1, t.vars);
         }
         VarId quadratic[2];
         quadratic[0] = vr._id;
@@ -320,35 +381,32 @@ void HigherOrderEnergy<R, D>::_EliminatePositiveTerms() {
 
 template <typename R, int D>
 template <typename QR>
-void HigherOrderEnergy<R, D>::_ReduceNegativeTerms(QR& qr) {
+void HigherOrderEnergyGraph<R, D>::_ReduceNegativeTerms(QR& qr) {
     // Estimate expected size of quadratic problem. Only nodes/edges are
     // created below, so we can count them ahead of time
-    int expectedVars = _varCounter;
     int expectedEdges = 0;
-    BOOST_FOREACH(const VarRecord& vr, _varRecords) {
-        expectedVars += vr._higherOrderTerms;
-        expectedEdges += vr._quadraticTerms;
-        expectedEdges += vr._sumDegrees;
+    for (const auto& t : _termSet) {
+        expectedEdges += (t.degree > 2) ? t.degree : 1;
     }
-
     //std::cout << "\tExpected Vars: " << expectedVars << "\tExpected Edges: " << expectedEdges << std::endl;
 
     qr.SetMaxEdgeNum(expectedEdges);
     qr.AddNode(_varCounter);
 
     // Term-by-term reduction from Friedman & Drineas
-    BOOST_FOREACH(VarRecord& vr, _varRecords) {
-        BOOST_FOREACH(Term& t, vr._terms) {
-            if (t.degree == 2) {
-                qr.AddPairwiseTerm(t.vars[0], t.vars[1], 0, 0, 0, t.coeff);
-            } else {
-                typename QR::NodeId w = qr.AddNode();
-                assert(t.coeff <= 0);
-                for (int i = 0; i < t.degree; ++i) {
-                    qr.AddPairwiseTerm(t.vars[i], w, 0, 0, 0, t.coeff);
-                }
-                qr.AddUnaryTerm(w, 0, t.coeff*(1-t.degree));
+    for (const auto& t : _termSet) {
+        if (t.degree == 2) {
+            qr.AddPairwiseTerm(t.vars[0], t.vars[1], 0, 0, 0, t.coeff);
+        } else {
+            assert(t.degree > 2);
+            assert(t.coeff <= 0);
+            if (t.coeff == 0)
+                continue;
+            auto w = qr.AddNode();
+            for (int i = 0; i < t.degree; ++i) {
+                qr.AddPairwiseTerm(t.vars[i], w, 0, 0, 0, t.coeff);
             }
+            qr.AddUnaryTerm(w, 0, t.coeff*(1-t.degree));
         }
     }
     BOOST_FOREACH(VarRecord& vr, _varRecords) {
@@ -358,26 +416,13 @@ void HigherOrderEnergy<R, D>::_ReduceNegativeTerms(QR& qr) {
 
 template <typename R, int D>
 template <typename QR>
-inline void HigherOrderEnergy<R, D>::ToQuadratic(QR& qr) {
+inline void HigherOrderEnergyGraph<R, D>::ToQuadratic(QR& qr) {
     _EliminatePositiveTerms();
     _ReduceNegativeTerms(qr);
 }
 
 template <typename R, int D>
-inline int HigherOrderEnergy<R, D>::Compare(int d1, const VarId vars1[], int d2, const VarId vars2[]) {
-    if (d1 < d2)
-        return -1;
-    if (d1 > d2)
-        return 1;
-    for (int index = 0; index < d1; ++index) {
-        if (vars1[index] != vars2[index])
-            return (vars1[index] < vars2[index]) ? -1 : 1;
-    }
-    return 0;
-}
-
-template <typename R, int D>
-inline void HigherOrderEnergy<R, D>::Clear() {
+inline void HigherOrderEnergyGraph<R, D>::Clear() {
     _varRecords.clear();
 };
 
