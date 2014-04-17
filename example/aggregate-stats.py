@@ -12,7 +12,7 @@ for fname in sys.argv[1:]:
         total_lines += 1
         fields = line.split()
         total_ediff += float(fields[7]) - float(fields[8])
-        total_labeled += float(fields[3])/3456.0
+        total_labeled += float(fields[3])/float(fields[1])
         total_time += float(fields[5])
 total_ediff /= total_lines
 total_labeled /= total_lines
