@@ -349,7 +349,8 @@ void HigherOrderEnergyGraph<R, D>::_EliminatePositiveTerms() {
     if (_usePriority) {
         for (size_t varIndex = 0; varIndex < numVars; ++varIndex) {
             auto& vr = _varRecords[varIndex];
-            vr._pqHandle = _positiveTermsPQ.emplace(varIndex, vr._numPositiveTerms);
+            VarPriority priority{varIndex, vr._numPositiveTerms};
+            vr._pqHandle = _positiveTermsPQ.push(priority);
         }
         while (!_positiveTermsPQ.empty()) {
             auto p = _positiveTermsPQ.top();
