@@ -13,6 +13,7 @@ enum class OptType {
     Fix,
     Fix_I, // FGBZ with QPBOI
     Fix_Rand, // FGBZ with random variable order
+    Fix_Prior, // FGBZ with variables in decreasing order of positive terms
     HOCR,
     GRD,
     GRD_Heur,
@@ -28,6 +29,7 @@ inline std::string ToString(OptType ot) {
         case OptType::Fix: return "fix";
         case OptType::Fix_I: return "fix-i";
         case OptType::Fix_Rand: return "fix-rand";
+        case OptType::Fix_Prior: return "fix-prior";
         case OptType::HOCR: return "hocr";
         case OptType::GRD: return "grd";
         case OptType::GRD_Heur: return "grd-heur";

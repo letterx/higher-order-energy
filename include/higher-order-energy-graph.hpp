@@ -100,6 +100,8 @@ class HigherOrderEnergyGraph {
 
         void Clear();
 
+        void SetUsePriority(bool b) { _usePriority = b; }
+
     private:
         typedef boost::intrusive::set_base_hook<
             boost::intrusive::link_mode<boost::intrusive::normal_link>>
@@ -155,14 +157,12 @@ class HigherOrderEnergyGraph {
         struct VarRecord {
             VarRecord(VarId id) 
                 : _id(id)
-                , _higherOrderTerms(0)
-                , _sumDegrees(0)
+                , _numPositiveTerms(0)
                 , _terms()
                 , _coeff(0) 
             { }
             VarId _id;
-            int _higherOrderTerms;
-            int _sumDegrees;
+            int _numPositiveTerms;
             std::vector<int> _terms; // Indices of positive terms
             R _coeff;
             PQHandle _pqHandle;
@@ -175,6 +175,7 @@ class HigherOrderEnergyGraph {
         void RemoveTerm(Term* tp);
         void AddTerm(Term& t);
         void _EliminatePositiveTerms();
+        void _EliminatePositiveTerms(NodeId varIndex);
         template <typename QR>
         void _ReduceNegativeTerms(QR& qr);
         void _ReportMultilinearStats();
@@ -237,16 +238,20 @@ HigherOrderEnergyGraph<R, D>::AddTerm(R coeff, int d, const VarId vars[]) {
         if (!p.second) { // Then term already exists
             Term& t = *p.first;
             t.coeff += coeff;
+            if (t.coeff > 0 && t.coeff - coeff <= 0) {
+                for (int i = 0; i < d; ++i)
+                    _varRecords[vars[i]]._numPositiveTerms++;
+            }
             _terms.pop_back();
         } else {
             int idx = _terms.size()-1;
             for (int i = 0; i < d; ++i) {
                 auto& vr = _varRecords[vars[i]];
                 vr._terms.push_back(idx);
-                if (d > 2) {
-                    vr._higherOrderTerms++;
-                    vr._sumDegrees += d;
-                }
+            }
+            if (coeff > 0) {
+                for (int i = 0; i < d; ++i)
+                    _varRecords[vars[i]]._numPositiveTerms++;
             }
         }
         return;
@@ -272,6 +277,10 @@ HigherOrderEnergyGraph<R, D>::AddTerm(Term& t) {
             Term& existing = *p.first;
             assert(&existing != &t);
             assert(t.degree == existing.degree);
+            if (existing.coeff > 0 && existing.coeff - t.coeff <= 0) {
+                for (int i = 0; i < existing.degree; ++i)
+                    _varRecords[existing.vars[i]]._numPositiveTerms++;
+            }
             for (int i = 0; i < t.degree; ++i) {
                 assert(t.vars[i] == existing.vars[i]);
             }
@@ -337,46 +346,76 @@ inline void HigherOrderEnergyGraph<R, D>::AddUnaryTerm(VarId var, R coeff) {
 template <typename R, int D>
 void HigherOrderEnergyGraph<R, D>::_EliminatePositiveTerms() {
     size_t numVars = _varRecords.size();
-    for (size_t varIndex = 0; varIndex < numVars; ++varIndex) {
-        R positiveSum = 0;
-        VarId newPosVar = AddVar();
-
-        VarRecord& vr = _varRecords.at(varIndex);
-        assert(vr._id == varIndex);
-
-        std::sort(vr._terms.begin(), vr._terms.end(), 
-                [&](int i1, int i2) { return TermComp()(*_terms[i1], *_terms[i2]); }
-                );
-
-        for (auto termIdx : vr._terms) {
-            assert(termIdx < _terms.size());
-            Term& t = *_terms.at(termIdx);
-            if (_termSet.find(t) == _termSet.end()) {
-                assert(t.coeff == 0);
-                continue;
-            }
-            assert(t.degree > 1);
-            assert(t.degree <= D);
-            assert(_termSet.find(t) != _termSet.end()); // May be too conservative
-            //std::cout << "\t" << t.ToString() << std::endl;
-            if (t.coeff <= 0)
-                continue;
-
-            positiveSum += t.coeff;
-            _termSet.erase(_termSet.iterator_to(t));
-            auto newEnd = std::remove(t.vars, t.vars + t.degree, varIndex);
-            assert(newEnd+1 == t.vars+t.degree);
-            t.degree--;
-            auto coeff = t.coeff;
-            AddTerm(t);
-            t.vars[t.degree] = newPosVar;
-            AddTerm(-coeff, t.degree+1, t.vars);
+    if (_usePriority) {
+        for (size_t varIndex = 0; varIndex < numVars; ++varIndex) {
+            auto& vr = _varRecords[varIndex];
+            vr._pqHandle = _positiveTermsPQ.emplace(varIndex, vr._numPositiveTerms);
         }
-        VarId quadratic[2];
-        quadratic[0] = vr._id;
-        quadratic[1] = newPosVar;
-        AddTerm(positiveSum, 2, quadratic);
+        while (!_positiveTermsPQ.empty()) {
+            auto p = _positiveTermsPQ.top();
+            _positiveTermsPQ.pop();
+            _EliminatePositiveTerms(p.first);
+        }
+    } else {
+        std::vector<NodeId> varOrder;
+        for (size_t varIndex = 0; varIndex < numVars; ++varIndex) 
+            varOrder.push_back(varIndex);
+        std::random_shuffle(varOrder.begin(), varOrder.end());
+
+        for (NodeId varIndex : varOrder) {
+            _EliminatePositiveTerms(varIndex);
+        }
     }
+}
+
+template <typename R, int D>
+void HigherOrderEnergyGraph<R, D>::_EliminatePositiveTerms(NodeId varIndex) {
+    R positiveSum = 0;
+    VarId newPosVar = AddVar();
+
+    VarRecord& vr = _varRecords.at(varIndex);
+    assert(vr._id == varIndex);
+
+    std::sort(vr._terms.begin(), vr._terms.end(), 
+            [&](int i1, int i2) { return TermComp()(*_terms[i1], *_terms[i2]); }
+            );
+
+    for (auto termIdx : vr._terms) {
+        assert(termIdx < _terms.size());
+        Term& t = *_terms.at(termIdx);
+        if (_termSet.find(t) == _termSet.end()) {
+            assert(t.coeff == 0);
+            continue;
+        }
+        assert(t.degree > 1);
+        assert(t.degree <= D);
+        assert(_termSet.find(t) != _termSet.end()); // May be too conservative
+        //std::cout << "\t" << t.ToString() << std::endl;
+        if (t.coeff <= 0)
+            continue;
+
+        positiveSum += t.coeff;
+        _termSet.erase(_termSet.iterator_to(t));
+        auto newEnd = std::remove(t.vars, t.vars + t.degree, varIndex);
+        assert(newEnd+1 == t.vars+t.degree);
+        t.degree--;
+        if (_usePriority && t.degree == 1) {
+            auto& otherVR = _varRecords[t.vars[0]];
+            otherVR._numPositiveTerms--;
+            auto handle = otherVR._pqHandle;
+            (*handle).second = otherVR._numPositiveTerms;
+            _positiveTermsPQ.update(handle);
+        }
+
+        auto coeff = t.coeff;
+        AddTerm(t);
+        t.vars[t.degree] = newPosVar;
+        AddTerm(-coeff, t.degree+1, t.vars);
+    }
+    VarId quadratic[2];
+    quadratic[0] = vr._id;
+    quadratic[1] = newPosVar;
+    AddTerm(positiveSum, 2, quadratic);
 }
 
 template <typename R, int D>

@@ -179,6 +179,16 @@ void FusionMove(FusionStats& stats,
         GetFusedImage(stats, size, current, proposed, out, qr);
     } else if (optType == OptType::Fix_Rand) {
         HigherOrderEnergyGraph<Energy, D> hoe;
+        hoe.SetUsePriority(false);
+        SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
+        hoe.ToQuadratic(qr);
+        QRStats<Energy>(stats, qr);
+        qr.Solve();
+        qr.ComputeWeakPersistencies();
+        GetFusedImage(stats, size, current, proposed, out, qr);
+    } else if (optType == OptType::Fix_Prior) {
+        HigherOrderEnergyGraph<Energy, D> hoe;
+        hoe.SetUsePriority(true);
         SetupFusionEnergy(size, current, proposed, cliqueSystem, hoe);
         hoe.ToQuadratic(qr);
         QRStats<Energy>(stats, qr);

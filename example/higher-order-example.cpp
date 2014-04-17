@@ -102,6 +102,8 @@ int main(int argc, char **argv) {
                     methods.push_back(OptType::Fix);
                 } else if (m == std::string("fix-rand")) {
                     methods.push_back(OptType::Fix_Rand);
+                } else if (m == std::string("fix-prior")) {
+                    methods.push_back(OptType::Fix_Prior);
                 } else if (m == std::string("pc")) {
                     methods.push_back(OptType::PC);
                 } else if (m == std::string("pc-grid")) {
